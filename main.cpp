@@ -925,12 +925,20 @@ void resize_defines(consts* def, double l, double t)
 void read_defines(int argc, char *argv[], consts* def)
 {
 	FILE *defs;
-	const char *file = DEFINES_FILE;
 	char str[250] = "", attr_name[50] = "", attr_value[50] = "";
+	// Settings file name
+	char file[32];
+
+	printf("%d: %s %s \n", argc, argv[0], argv[1]);
+	if (argc > 1)
+	{
+		strcpy(file, argv[1]);
+	} else {
+		strcpy(file, "..//defines.ini");
+	}
 
 	if (!(defs = fopen(file, "rt")))
 	{
-		file = "defines.ini";
 		if (!(defs = fopen(file, "rt")))
 		{
 			char error[30];

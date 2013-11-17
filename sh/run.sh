@@ -2,7 +2,7 @@
 
 # Usage description
 if [ -z "$4" ]; then
-	echo Usage: $0 processors_per_node_count processors_count time_limit_in_minutes exe_name
+	echo Usage: $0 processors_per_node_count processors_count time_limit_in_minutes exe_name [ini_file]
 	exit
 fi
 
@@ -39,7 +39,6 @@ else
 	PPN="-ppn $1"
 fi
 
-
 if [ $3 = 0 ]; then
 	maxtime=""
 else
@@ -49,8 +48,14 @@ fi
 exe_name=$4
 project_folder="Three-phase"
 
+if [ -z "$5" ]; then
+	ini_file="../defines.ini"
+else
+	ini_file=$5
+fi
+
 cd ../$project_folder/Debug
-echo "mpirun $PPN -np $2 $maxtime ../$project_folder/Debug/$exe_name"
-mpirun $PPN -np $2 $maxtime ./$exe_name
+echo "mpirun $PPN -np $2 $maxtime ../$project_folder/Debug/$exe_name" $ini_file
+mpirun $PPN -np $2 $maxtime ./$exe_name $ini_file
 
 exit

@@ -12,7 +12,6 @@
 // Количество видеоускорителей на узле кластера
 // Для К-100 - 3, для МВС-Экспресс 1 или 2
 #define GPU_PER_NODE 3
-#define DEFINES_FILE "..//defines.ini"
 
 // Нитей в блоке ускорителя
 #define BlockNX 8
