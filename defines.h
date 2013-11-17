@@ -134,17 +134,17 @@ extern void restore(const ptr_Arrays &HostArraysPtr, long int* time_counter, con
 extern void save(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, long int time_counter, const consts &def);
 extern void read_defines(int argc, char *argv[], consts* def);
 extern void read_version(void);
-extern void print_error(char *error, char *file, int line);
+extern void print_error(const char *error, const char *file, int line);
 
 // Unit-тесты
 extern void test_correct_P_S(const ptr_Arrays &HostArraysPtr, const consts &def);
-extern void test_nan(double x, char *file, int line);
-extern void test_positive(double x, char *file, int line);
-extern void test_S(double S, char *file, int line);
-extern void test_u(double u, char *file, int line);
-extern void test_ro(double ro, char *file, int line);
-extern void test_arrowhead(double big, double small, char *file, int line);
-extern void test_tau(double S_old, double S_now, double S_new, int local, const consts &def, char *file, int line);
+extern void test_nan(double x, const char *file, int line);
+extern void test_positive(double x, const char *file, int line);
+extern void test_S(double S, const char *file, int line);
+extern void test_u(double u, const char *file, int line);
+extern void test_ro(double ro, const char *file, int line);
+extern void test_arrowhead(double big, double small, const char *file, int line);
+extern void test_tau(double S_old, double S_now, double S_new, int local, const consts &def, const char *file, int line);
 extern void read_defines_test(const consts &def);
 
 

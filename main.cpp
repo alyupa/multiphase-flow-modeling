@@ -925,10 +925,8 @@ void resize_defines(consts* def, double l, double t)
 void read_defines(int argc, char *argv[], consts* def)
 {
 	FILE *defs;
-	char *file;
+	const char *file = DEFINES_FILE;
 	char str[250] = "", attr_name[50] = "", attr_value[50] = "";
-
-	file = DEFINES_FILE;
 
 	if (!(defs = fopen(file, "rt")))
 	{

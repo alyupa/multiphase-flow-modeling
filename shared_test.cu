@@ -2,7 +2,7 @@
 #include "cuPrintf.cu"
 
 // Проверка ошибок GPU
-void checkErrors(char *label, char *file, int line)
+void checkErrors(const char *label, const char *file, int line)
 {
 #ifdef MY_TEST
 	cudaError_t err;
@@ -25,14 +25,14 @@ void checkErrors(char *label, char *file, int line)
 }
 
 // Функция, вызываемая при ошибке
-__device__ void device_print_error(char *error, char *file, int line)
+__device__ void device_print_error(char *error, const char *file, int line)
 {
 	CUPRINTF("Error: %s\nFile: \"%s\"\nLine: %d\n\n", error, file, line);
 }
 
 // Тест на NaN
 // Синтаксис вызова device_test_nan(x, __FILE__, __LINE__);
-__device__ void device_test_nan(double x, char *file, int line)
+__device__ void device_test_nan(double x, const char *file, int line)
 {
 #ifdef MY_TEST
 	if ((x > 1e+30) || (x < -1 * 1e+40))
@@ -44,7 +44,7 @@ __device__ void device_test_nan(double x, char *file, int line)
 
 // Тест на положительное и не NaN
 // Синтаксис вызова device_test_positive(x, __FILE__, __LINE__);
-__device__ void device_test_positive(double x, char *file, int line)
+__device__ void device_test_positive(double x, const char *file, int line)
 {
 #ifdef MY_TEST
 	if ((x > 1e+30) || (x < 0))
@@ -56,7 +56,7 @@ __device__ void device_test_positive(double x, char *file, int line)
 
 // Тест на вхождение насыщенностей в [0;1]
 // Синтаксис вызова device_test_S(x, __FILE__, __LINE__);
-__device__ void device_test_S(double S, char *file, int line)
+__device__ void device_test_S(double S, const char *file, int line)
 {
 #ifdef MY_TEST
 	if (S < 0)
@@ -72,7 +72,7 @@ __device__ void device_test_S(double S, char *file, int line)
 
 // Тест на вхождение скоростей в [-100;100]
 // Синтаксис вызова test_u(x, __FILE__, __LINE__);
-__device__ void device_test_u(double u, char *file, int line)
+__device__ void device_test_u(double u, const char *file, int line)
 {
 #ifdef MY_TEST
 	if (u < -1e8)
@@ -88,7 +88,7 @@ __device__ void device_test_u(double u, char *file, int line)
 
 // Тест на вхождение плотностей в [0;3000]
 // Синтаксис вызова test_ro(x, __FILE__, __LINE__);
-__device__ void device_test_ro(double ro, char *file, int line)
+__device__ void device_test_ro(double ro, const char *file, int line)
 {
 #ifdef MY_TEST
 	if (ro < 0)

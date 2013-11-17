@@ -3,7 +3,7 @@
 // Тестирование
 
 // Функция, вызываемая при ошибке
-void print_error(char *error, char *file, int line)
+void print_error(const char *error, const char *file, int line)
 {
 	printf("Error: %s\nFile: \"%s\"\nLine: %d\n\n", error, file, line);
 	fflush(stdout);
@@ -30,7 +30,7 @@ void test_correct_P_S(const ptr_Arrays &HostArraysPtr, const consts &def)
 
 // Тест на NaN
 // Синтаксис вызова test_nan(x, __FILE__, __LINE__);
-void test_nan(double x, char *file, int line)
+void test_nan(double x, const char *file, int line)
 {
 #ifdef MY_TEST
 	if (isnan(x))
@@ -48,7 +48,7 @@ void test_nan(double x, char *file, int line)
 
 // Тест на положительное и не NaN
 // Синтаксис вызова test_positive(x, __FILE__, __LINE__);
-void test_positive(double x, char *file, int line)
+void test_positive(double x, const char *file, int line)
 {
 #ifdef MY_TEST
 	if (isnan(x))
@@ -64,7 +64,7 @@ void test_positive(double x, char *file, int line)
 
 // Тест на вхождение насыщенностей в [0;1]
 // Синтаксис вызова test_S(x, __FILE__, __LINE__);
-void test_S(double S, char *file, int line)
+void test_S(double S, const char *file, int line)
 {
 #ifdef MY_TEST
 	if (isnan(S))
@@ -84,7 +84,7 @@ void test_S(double S, char *file, int line)
 
 // Тест на вхождение скоростей в [-100;100]
 // Синтаксис вызова test_u(x, __FILE__, __LINE__);
-void test_u(double u, char *file, int line)
+void test_u(double u, const char *file, int line)
 {
 #ifdef MY_TEST
 	if (isnan(u))
@@ -105,7 +105,7 @@ void test_u(double u, char *file, int line)
 
 // Тест на вхождение плотностей в [-0;1500]
 // Синтаксис вызова test_ro(x, __FILE__, __LINE__);
-void test_ro(double ro, char *file, int line)
+void test_ro(double ro, const char *file, int line)
 {
 #ifdef MY_TEST
 	if (isnan(ro))
@@ -125,7 +125,7 @@ void test_ro(double ro, char *file, int line)
 
 // Функция проверяет, что первый аргумент много больше (по модулю) второго
 // Если это не так, печатается предупреждение
-void test_arrowhead(double big, double small, char *file, int line)
+void test_arrowhead(double big, double small, const char *file, int line)
 {
 #ifdef MY_TEST_1
 	if (fabs(big / 30) < fabs(small))
@@ -137,7 +137,7 @@ void test_arrowhead(double big, double small, char *file, int line)
 
 // Функция проверяет, что первое слагаемое уравнения неразрывности много больше (по модулю) второго
 // Если это не так, печатается предупреждение
-void test_tau(double S_old, double S_now, double S_new, int local, const consts &def, char *file, int line)
+void test_tau(double S_old, double S_now, double S_new, int local, const consts &def, const char *file, int line)
 {
 #ifdef MY_TEST_1
 	double L = HostArraysPtr.m[local] * (S_new - S_old) / (2 * (def.dt));

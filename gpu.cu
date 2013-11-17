@@ -1,8 +1,9 @@
 #include "gpu.h"
 #include "shared_test.cu"
-#include "Three-phase/three-phase.cu"
 
 __constant__ consts gpu_def [1];
+
+#include "Three-phase/three-phase.cu"
 
 __global__ void assign_ro_kernel(ptr_Arrays DevArraysPtr)
 {
@@ -732,11 +733,11 @@ void device_initialization(consts* def)
 		printf("Name : %s\n", devProp.name);
 		printf("Compute capability : %d.%d\n", devProp.major, devProp.minor);
 		printf("Total Global Memory : %ld\n", devProp.totalGlobalMem);
-		printf("Shared memory per block: %d\n", devProp.sharedMemPerBlock);
+		printf("Shared memory per block: %ld\n", devProp.sharedMemPerBlock);
 		printf("Registers per block : %d\n", devProp.regsPerBlock);
 		printf("Warp size : %d\n", devProp.warpSize);
 		printf("Max threads per block : %d\n", devProp.maxThreadsPerBlock);
-		printf("Total constant memory : %d\n", devProp.totalConstMem);
+		printf("Total constant memory : %ld\n", devProp.totalConstMem);
 		printf("Number of multiprocessors: %d\n",  devProp.multiProcessorCount);
 		//printf("Kernel execution timeout: %s\n\n", (devProp.kernelExecTimeoutEnabled ? "Yes" : "No"));
 		for (int i = 0; i < 3; ++i)
@@ -751,7 +752,7 @@ void device_initialization(consts* def)
 
 		// Максимальный размер расчетной сетки для ускорителя
 		// sizeof(ptr_Arrays)/4 - количество параметров в точке, т.к. 4 -размер одного указателя
-		printf("\nTotal NAPL_Filtration grid size : %d\n\n", devProp.totalGlobalMem / (sizeof(ptr_Arrays)*sizeof(double) / 4));
+		printf("\nTotal NAPL_Filtration grid size : %ld\n\n", devProp.totalGlobalMem / (sizeof(ptr_Arrays)*sizeof(double) / 4));
 	}
 
 	// (def.locNx)+2 потому что 2NyNz на буфер обмена выделяется
