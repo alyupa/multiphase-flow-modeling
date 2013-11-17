@@ -27,7 +27,7 @@ else
 fi
 
 # Debug mode
-if [ "$3" = "debug" or "$4" = "debug" ]; then
+if [ "$3" = "debug" -o "$4" = "debug" ]; then
 	debug="-D MY_TEST"
 	exe_name="$exe_name_debug"
 fi
@@ -89,7 +89,7 @@ else 	if [ "$hostname" = "mvse" ]; then
 	fi
 fi
 
-mkdir ../$project_folder/Debug
+mkdir -p ../$project_folder/Debug
 exe_name="$exe_name.px"
 
 echo "$compilator $task_name $debug $lib_path ../main.cpp $comm_file $energy ../shared_test.cpp ../gauss.cpp $arch_file -o ../$project_folder/Debug/$exe_name"
