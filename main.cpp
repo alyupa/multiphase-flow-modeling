@@ -971,7 +971,8 @@ void read_defines(int argc, char *argv[], consts* def)
 		{
 			attr_value[j - i - 1] = str[j];
 		}
-		attr_value[j - i - 1] = '\0';
+		// remove \n symbol
+		attr_value[j - i - 2] = '\0';
 
 		//std::cout << str <<"\n";
 
@@ -1235,8 +1236,6 @@ void read_defines(int argc, char *argv[], consts* def)
 		if (!strcmp(attr_name, "PLOTS_DIR"))
 		{
 			strcpy(def->plots_dir, attr_value);
-			// TODO: check attr_value length in case of string
-			def->plots_dir[strlen(attr_value) - 2] = '\0';
 			continue;
 		}
 		if (!strcmp(attr_name, "PRINT_SCREEN"))
