@@ -74,7 +74,6 @@ struct consts_tag
 	int Nx, Ny, Nz;
 	int source, save_plots, print_screen, newton_iterations;
 	double K[2];
-	double Q, InjWell_Pw, InjWell_Sn, OutWell_Pw, OutWell_Sn, Background_Sn, Background_Pw; // Дебит скважины
 	double S_w_init, S_n_init;
 	double S_nr[2];
 	double S_gr[2];

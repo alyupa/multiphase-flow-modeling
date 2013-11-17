@@ -896,15 +896,11 @@ void resize_defines(consts* def, double l, double t)
 	def->hy *= l;
 	def->hz *= l;
 	def->P_atm *= m/(l*l);
-	def->Background_Pw *= m/(l*l);
-	def->InjWell_Pw *= m/(l*l);
-	def->OutWell_Pw *= m/(l*l);
 	def->beta_w *= (l*l)/m;
 	def->beta_n *= (l*l)/m;
 	def->g_const *= l/(t*t);
 	def->K[0] *= l*l;
 	def->K[1] *= l*l;
-	def->Q *= m/(t * l*l*l);
 	def->mu_w *= m*t/(l*l);
 	def->mu_n *= m*t/(l*l);
 	def->ro0_n *= m/(pow(l,3));
@@ -976,19 +972,19 @@ void read_defines(int argc, char *argv[], consts* def)
 
 		//std::cout << str <<"\n";
 
-		if (!strcmp(attr_name, "HX"))
+		if (!strcmp(attr_name, "NX"))
 		{
-			def->hx = atof(attr_value);
+			def->Nx = atoi(attr_value);
 			continue;
 		}
-		if (!strcmp(attr_name, "HY"))
+		if (!strcmp(attr_name, "NY"))
 		{
-			def->hy = atof(attr_value);
+			def->Ny = atoi(attr_value);
 			continue;
 		}
-		if (!strcmp(attr_name, "HZ"))
+		if (!strcmp(attr_name, "NZ"))
 		{
-			def->hz = atof(attr_value);
+			def->Nz = atoi(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "TAU"))
@@ -1056,7 +1052,6 @@ void read_defines(int argc, char *argv[], consts* def)
 			def->P_atm = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "LAMBDA_0"))
 		{
 			def->lambda[0] = atof(attr_value);
@@ -1085,41 +1080,6 @@ void read_defines(int argc, char *argv[], consts* def)
 		if (!strcmp(attr_name, "S_WR_1"))
 		{
 			def->S_wr[1] = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "Q"))
-		{
-			def->Q = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "BACKGROUND_Pw"))
-		{
-			def->Background_Pw = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "BACKGROUND_Sn"))
-		{
-			def->Background_Sn = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "INJECTION_WELL_Pw"))
-		{
-			def->InjWell_Pw = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "INJECTION_WELL_Sn"))
-		{
-			def->InjWell_Sn = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "OUTPUT_WELL_Pw"))
-		{
-			def->OutWell_Pw = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "OUTPUT_WELL_Sn"))
-		{
-			def->OutWell_Sn = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "K_0"))
@@ -1243,24 +1203,14 @@ void read_defines(int argc, char *argv[], consts* def)
 			def->print_screen = atoi(attr_value);
 			continue;
 		}
-		if (!strcmp(attr_name, "NX"))
-		{
-			def->Nx = atoi(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "NY"))
-		{
-			def->Ny = atoi(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "NZ"))
-		{
-			def->Nz = atoi(attr_value);
-			continue;
-		}
 	}
 
 	fclose(defs);
+
+	// Determine hx, hy, hz from Nx, Ny, Nz
+	def->hx = 1.0 / (double)def->Nx;
+	def->hy = 1.0 / (double)def->Ny;
+	def->hz = 1.0 / (double)def->Nz;
 
 	// Если нет масштабирования, то 1
 	def->upscale_l=1;
@@ -1269,7 +1219,7 @@ void read_defines(int argc, char *argv[], consts* def)
 	read_defines_test(*def);
 
 	//resize_defines(def, 0.15, 0.01);
-	read_defines_test(*def);
+	//read_defines_test(*def);
 }
 
 // Вывод на экран распределения процессоров в системе и области по процессорам
