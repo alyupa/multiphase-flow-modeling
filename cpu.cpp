@@ -144,7 +144,6 @@ void assign_ro(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const const
 {
 	int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 
-#ifdef THREE_PHASE
 #ifdef ENERGY
 	// !!! Вынести коэффициенты теплового расширения в const consts &def и использовать T_0 оттуда же
 	double alfa_w = 1.32E-7; // 1/K !!! E-4
@@ -160,10 +159,6 @@ void assign_ro(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const const
 	HostArraysPtr.ro_g[local] = def.ro0_g * HostArraysPtr.P_g[local] / def.P_atm;
 #endif
 	test_ro(HostArraysPtr.ro_g[local], __FILE__, __LINE__);
-#else
-	HostArraysPtr.ro_w[local] = def.ro0_w * (1. + (def.beta_w) * (HostArraysPtr.P_w[local] - def.P_atm));
-	HostArraysPtr.ro_n[local] = def.ro0_n * (1. + (def.beta_n) * (HostArraysPtr.P_n[local] - def.P_atm));
-#endif
 	test_ro(HostArraysPtr.ro_w[local], __FILE__, __LINE__);
 	test_ro(HostArraysPtr.ro_n[local], __FILE__, __LINE__);
 }
@@ -172,13 +167,8 @@ void assign_S(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 {
 	int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 
-#ifdef THREE_PHASE
 	HostArraysPtr.S_g[local] = 1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local];
 	test_S(HostArraysPtr.S_g[local], __FILE__, __LINE__);
-#else
-	HostArraysPtr.S_w[local] = 1. - HostArraysPtr.S_n[local];
-	test_S(HostArraysPtr.S_w[local], __FILE__, __LINE__);
-#endif
 }
 
 // Расчет центральной разности
@@ -352,9 +342,7 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 		{
 			HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * right_difference(HostArraysPtr.P_w+local, 'x', def);
 			HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * right_difference(HostArraysPtr.P_n+local, 'x', def);
-#ifdef THREE_PHASE
 			HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * right_difference(HostArraysPtr.P_g+local, 'x', def);
-#endif
 		}
 		else
 		{
@@ -362,17 +350,13 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 			{
 				HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * left_difference(HostArraysPtr.P_w+local, 'x', def);
 				HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * left_difference(HostArraysPtr.P_n+local, 'x', def);
-#ifdef THREE_PHASE
 				HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * left_difference(HostArraysPtr.P_g+local, 'x', def);
-#endif
 			}
 			else
 			{
 				HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * central_difference (HostArraysPtr.P_w+local, 'x', def);
 				HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * central_difference (HostArraysPtr.P_n+local, 'x', def);
-#ifdef THREE_PHASE
 				HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * central_difference (HostArraysPtr.P_g+local, 'x', def);
-#endif
 			}
 		}
 	}
@@ -380,9 +364,7 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 	{
 		HostArraysPtr.ux_w[local] = 0.;
 		HostArraysPtr.ux_n[local] = 0.;
-#ifdef THREE_PHASE
 		HostArraysPtr.ux_g[local] = 0.;
-#endif
 	}
 
 	if ((def.Ny) > 2)
@@ -391,9 +373,7 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 		{
 			HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (right_difference (HostArraysPtr.P_w+local, 'y', def) - HostArraysPtr.ro_w[local] * (def.g_const));
 			HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (right_difference (HostArraysPtr.P_n+local, 'y', def) - HostArraysPtr.ro_n[local] * (def.g_const));
-#ifdef THREE_PHASE
 			HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (right_difference (HostArraysPtr.P_g+local, 'y', def) - HostArraysPtr.ro_g[local] * (def.g_const));
-#endif
 		}
 		else
 		{
@@ -401,17 +381,13 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 			{
 				HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (left_difference (HostArraysPtr.P_w+local, 'y', def) - HostArraysPtr.ro_w[local] * (def.g_const));
 				HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (left_difference (HostArraysPtr.P_n+local, 'y', def) - HostArraysPtr.ro_n[local] * (def.g_const));
-#ifdef THREE_PHASE
 				HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (left_difference (HostArraysPtr.P_g+local, 'y', def) - HostArraysPtr.ro_g[local] * (def.g_const));
-#endif
 			}
 			else
 			{
 				HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (central_difference (HostArraysPtr.P_w+local, 'y', def)	- HostArraysPtr.ro_w[local] * (def.g_const));
 				HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (central_difference (HostArraysPtr.P_n+local, 'y', def)	- HostArraysPtr.ro_n[local] * (def.g_const));
-#ifdef THREE_PHASE
 				HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (central_difference (HostArraysPtr.P_g+local, 'y', def)	- HostArraysPtr.ro_g[local] * (def.g_const));
-#endif
 			}
 		}
 	}
@@ -419,9 +395,7 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 	{
 		HostArraysPtr.uy_w[local] = 0.;
 		HostArraysPtr.uy_n[local] = 0.;
-#ifdef THREE_PHASE
 		HostArraysPtr.uy_g[local] = 0.;
-#endif
 	}
 
 	if ((def.Nz) > 2)
@@ -430,9 +404,7 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 		{
 			HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * right_difference (HostArraysPtr.P_w+local, 'z', def);
 			HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * right_difference (HostArraysPtr.P_n+local, 'z', def);
-#ifdef THREE_PHASE
 			HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * right_difference (HostArraysPtr.P_g+local, 'z', def);
-#endif
 		}
 		else
 		{
@@ -440,17 +412,13 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 			{
 				HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * left_difference (HostArraysPtr.P_w+local, 'z', def);
 				HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * left_difference (HostArraysPtr.P_n+local, 'z', def);
-#ifdef THREE_PHASE
 				HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * left_difference (HostArraysPtr.P_g+local, 'z', def);
-#endif
 			}
 			else
 			{
 				HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * central_difference (HostArraysPtr.P_w+local, 'z', def);
 				HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * central_difference (HostArraysPtr.P_n+local, 'z', def);
-#ifdef THREE_PHASE
 				HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * central_difference (HostArraysPtr.P_g+local, 'z', def);
-#endif
 			}
 		}
 	}
@@ -458,9 +426,7 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 	{
 		HostArraysPtr.uz_w[local] = 0.;
 		HostArraysPtr.uz_n[local] = 0.;
-#ifdef THREE_PHASE
 		HostArraysPtr.uz_g[local] = 0.;
-#endif
 	}
 
 	test_u(HostArraysPtr.ux_w[local], __FILE__, __LINE__);
@@ -469,11 +435,9 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 	test_u(HostArraysPtr.uy_n[local], __FILE__, __LINE__);
 	test_u(HostArraysPtr.uz_w[local], __FILE__, __LINE__);
 	test_u(HostArraysPtr.uz_n[local], __FILE__, __LINE__);
-#ifdef THREE_PHASE
 	test_u(HostArraysPtr.ux_g[local], __FILE__, __LINE__);
 	test_u(HostArraysPtr.uy_g[local], __FILE__, __LINE__);
 	test_u(HostArraysPtr.uz_g[local], __FILE__, __LINE__);
-#endif
 }
 
 void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def)
@@ -483,62 +447,48 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 		double divgrad1, divgrad2, Tx1, Ty1, Tz1, Tx2, Ty2, Tz2, A1 = 0, A2 = 0;
 
-#ifdef THREE_PHASE
 		double divgrad3, Tx3, Ty3, Tz3, A3 = 0;
-#else
-#endif
+
 		HostArraysPtr.roS_w[local] = HostArraysPtr.ro_w[local] * HostArraysPtr.S_w[local];
 		HostArraysPtr.roS_n[local] = HostArraysPtr.ro_n[local] * HostArraysPtr.S_n[local];
-#ifdef THREE_PHASE
 		HostArraysPtr.roS_g[local] = HostArraysPtr.ro_g[local] * HostArraysPtr.S_g[local];
-#endif
 
 		if ((def.Nz) < 2)
 		{
 			divgrad1 = 0.;
 			divgrad2 = 0.;
+			divgrad3 = 0.;
 			Tz1 = 0.;
 			Tz2 = 0.;
-#ifdef THREE_PHASE
-			divgrad3 = 0.;
 			Tz3 = 0.;
-#endif
 		}
 		else
 		{
 			divgrad1 = multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'z', def);
 			divgrad2 = multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'z', def);
+			divgrad3 = multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'z', def);
 
 			Tz1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'z', def);
 			Tz2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'z', def);
-
-#ifdef THREE_PHASE
-			divgrad3 = multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'z', def);
 			Tz3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'z', def);
-#endif
 		}
 
 		if ((def.Nx) < 2)
 		{
 			Tx1 = 0.;
 			Tx2 = 0.;
-#ifdef THREE_PHASE
-			divgrad3 = 0.;
 			Tx3 = 0.;
-#endif
+			divgrad3 = 0.;
 		}
 		else
 		{
 			divgrad1 += multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'x', def);
 			divgrad2 += multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'x', def);
+			divgrad3 += multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'x', def);
 
 			Tx1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'x', def);
 			Tx2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'x', def);
-
-#ifdef THREE_PHASE
-			divgrad3 += multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'x', def);
 			Tx3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'x', def);
-#endif
 		}
 
 		divgrad1 += multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'y', def);
@@ -547,20 +497,16 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 		divgrad2 += multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'y', def);
 		divgrad2 *= HostArraysPtr.m[local] * (def.l) * (def.c_n);
 
-		Ty1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'y', def);		
-		Ty2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'y', def);
-
-		test_arrowhead(Tx1 + Ty1 + Tz1, divgrad1, __FILE__, __LINE__);
-		test_arrowhead(Tx2 + Ty2 + Tz2, divgrad2, __FILE__, __LINE__);
-
-#ifdef THREE_PHASE
 		divgrad3 += multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'y', def);
 		divgrad3 *= HostArraysPtr.m[local] * (def.l) * (def.c_g);
 
+		Ty1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'y', def);		
+		Ty2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'y', def);
 		Ty3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'y', def);
 
+		test_arrowhead(Tx1 + Ty1 + Tz1, divgrad1, __FILE__, __LINE__);
+		test_arrowhead(Tx2 + Ty2 + Tz2, divgrad2, __FILE__, __LINE__);
 		test_arrowhead(Tx3 + Ty3 + Tz3, divgrad3, __FILE__, __LINE__);
-#endif
 
 		double q_w = 0.;
 		double q_n = 0.;
@@ -573,9 +519,7 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 		{
 			A1 = HostArraysPtr.roS_w[local] + ((def.dt) / HostArraysPtr.m[local]) * (q_w + divgrad1 - Tx1 - Ty1 - Tz1);
 			A2 = HostArraysPtr.roS_n[local] + ((def.dt) / HostArraysPtr.m[local]) * (q_n + divgrad2 - Tx2 - Ty2 - Tz2);
-#ifdef THREE_PHASE
 			A3 = HostArraysPtr.roS_g[local] + ((def.dt) / HostArraysPtr.m[local]) * (q_g + divgrad3 - Tx3 - Ty3 - Tz3);
-#endif
 		}
 		else
 		{
@@ -586,32 +530,25 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 			        + ((HostArraysPtr.m[local]) * (def.dt) - 2. * (def.tau)) * HostArraysPtr.roS_n_old[local]
 			        + 4. * (def.tau) * HostArraysPtr.roS_n[i + j * (def.locNx) + k * (def.locNx) * (def.locNy)]);
 
-			test_tau(HostArraysPtr.roS_w_old[local], HostArraysPtr.roS_w[local], A1, local, def, __FILE__, __LINE__);
-			test_tau(HostArraysPtr.roS_n_old[local], HostArraysPtr.roS_n[local], A2, local, def, __FILE__, __LINE__);
-
-#ifdef THREE_PHASE
 			A3 = (1. / ((HostArraysPtr.m[local]) * (def.dt) + 2. * (def.tau))) * (2. * (def.dt) * (def.dt) * (q_g + divgrad3 - Tx3 - Ty3 - Tz3)
 			        + ((HostArraysPtr.m[local]) * (def.dt) - 2. * (def.tau)) * HostArraysPtr.roS_g_old[local]
 			        + 4. * (def.tau) * HostArraysPtr.roS_g[i + j * (def.locNx) + k * (def.locNx) * (def.locNy)]);
-#endif
+
+			test_tau(HostArraysPtr.roS_w_old[local], HostArraysPtr.roS_w[local], A1, local, def, __FILE__, __LINE__);
+			test_tau(HostArraysPtr.roS_n_old[local], HostArraysPtr.roS_n[local], A2, local, def, __FILE__, __LINE__);
+			test_tau(HostArraysPtr.roS_g_old[local], HostArraysPtr.roS_g[local], A3, local, def, __FILE__, __LINE__);
 		}
 
 		HostArraysPtr.roS_w_old[local] = HostArraysPtr.roS_w[local];
 		HostArraysPtr.roS_n_old[local] = HostArraysPtr.roS_n[local];
+		HostArraysPtr.roS_g_old[local] = HostArraysPtr.roS_g[local];
 		HostArraysPtr.roS_w[local] = A1;
 		HostArraysPtr.roS_n[local] = A2;
+		HostArraysPtr.roS_g[local] = A3;
 
 		test_positive(HostArraysPtr.roS_w[local], __FILE__, __LINE__);
 		test_positive(HostArraysPtr.roS_n[local], __FILE__, __LINE__);
-
-#ifdef THREE_PHASE
-		HostArraysPtr.roS_g_old[local] = HostArraysPtr.roS_g[local];
-		HostArraysPtr.roS_g[local] = A3;
 		test_positive(HostArraysPtr.roS_g[local], __FILE__, __LINE__);
-#endif
-		//		double delta_roS_w = HostArraysPtr.roS_w[local] - HostArraysPtr.roS_w_old[local];
-		//		double delta_roS_n = HostArraysPtr.roS_n[local] - HostArraysPtr.roS_n_old[local];
-		//		double delta_roS_g = HostArraysPtr.roS_g[local] - HostArraysPtr.roS_g_old[local];
 	}
 }
 
@@ -632,16 +569,13 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		// Значения q на скважинах
 		wells_q(HostArraysPtr, i, j, k, &q_w, &q_n, &q_g, def);
 
-#ifdef THREE_PHASE
 		HostArraysPtr.roS_w[local] = HostArraysPtr.ro_w[local] * HostArraysPtr.S_w[local];
 		HostArraysPtr.roS_g[local] = HostArraysPtr.ro_g[local]
 		        * (1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local]);
 
 		double Pg = HostArraysPtr.P_g[local];
 		double fx_g, fy_g, fz_g, A3 = 0.;
-#else
-		HostArraysPtr.roS_w[local] = HostArraysPtr.ro_w[local] * (1. - HostArraysPtr.S_n[local]);
-#endif
+
 		HostArraysPtr.roS_n[local] = HostArraysPtr.ro_n[local] * HostArraysPtr.S_n[local];
 		double Pw = HostArraysPtr.P_w[local];
 		double Pn = HostArraysPtr.P_n[local];
@@ -652,9 +586,7 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		{
 			fz_w = 0.;
 			fz_n = 0.;
-#ifdef THREE_PHASE
 			fz_g = 0.;
-#endif
 		}
 		else
 		{
@@ -665,20 +597,18 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 			z2 = -1. * right_difference (HostArraysPtr.P_n+local, 'z', def); 
 			z1 = -1. * left_difference (HostArraysPtr.P_n+local, 'z', def); 
 			fz_n = directed_difference (z1, z2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'z', def);
-#ifdef THREE_PHASE
+
 			z2 = -1. * right_difference (HostArraysPtr.P_g+local, 'z', def); 
 			z1 = -1. * left_difference (HostArraysPtr.P_g+local, 'z', def); 
 			fz_g = directed_difference (z1, z2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'z', def);
-#endif
+
 		}
 
 		if ((def.Nx) < 2)
 		{
 			fx_w = 0.;
 			fx_n = 0.;
-#ifdef THREE_PHASE
 			fx_g = 0.;
-#endif
 		}
 		else
 		{
@@ -689,11 +619,10 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 			x2 = -1. * right_difference (HostArraysPtr.P_n+local, 'x', def); 
 			x1 = -1. * left_difference (HostArraysPtr.P_n+local, 'x', def);
 			fx_n = directed_difference (x1, x2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'x', def);
-#ifdef THREE_PHASE
+
 			x2 = -1. * right_difference (HostArraysPtr.P_g+local, 'x', def); 
 			x1 = -1. * left_difference (HostArraysPtr.P_g+local, 'x', def); 
 			fx_g = directed_difference (x1, x2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'x', def);
-#endif
 		}
 
 		y2 = -1. * right_difference (HostArraysPtr.P_w+local, 'y', def) + def.g_const * (HostArraysPtr.ro_w[local]);
@@ -715,7 +644,6 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		test_positive(HostArraysPtr.roS_w[local], __FILE__, __LINE__);
 		test_positive(HostArraysPtr.roS_n[local], __FILE__, __LINE__);
 
-#ifdef THREE_PHASE
 		y2 = -1. * right_difference (HostArraysPtr.P_g+local, 'y', def) + def.g_const * (HostArraysPtr.ro_g[local]);
 		y1 = -1. * left_difference (HostArraysPtr.P_g+local, 'y', def) + def.g_const * (HostArraysPtr.ro_g[local]);
 		fy_g = directed_difference (y1, y2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'y', def);
@@ -726,7 +654,6 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		HostArraysPtr.roS_g[local] = A3;
 
 		test_positive(HostArraysPtr.roS_g[local], __FILE__, __LINE__);
-#endif
 	}
 }
 

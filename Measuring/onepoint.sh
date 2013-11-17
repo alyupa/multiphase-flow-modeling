@@ -15,8 +15,6 @@ else	if [ "$1" = "cpu" ]
 	fi
 fi
 
-taskD="-D THREE_PHASE"
-
 hostname=`hostname`
 #echo $hostname
 
@@ -53,11 +51,11 @@ then
 	debug_name="onepoint_gpu"
 	project_folder="3Ph_GPU_PointTime"
 	arch_file="./Debug/onepoint.o"
-	echo "nvcc $taskD -c -arch sm_$ARCH ../gpu.cu -o $arch_file"
-	nvcc $taskD -c -arch sm_$ARCH ../gpu.cu -o $arch_file
+	echo "nvcc -c -arch sm_$ARCH ../gpu.cu -o $arch_file"
+	nvcc -c -arch sm_$ARCH ../gpu.cu -o $arch_file
 	
-	echo "$compilator $taskD $lib_path ./$project_folder/main.cpp ../no_communication.cpp ../shared_test.cpp $arch_file -o ./Debug/$debug_name.px"
-    $compilator $taskD $lib_path ./OnePointTime/main.cpp ../no_communication.cpp ../shared_test.cpp $arch_file -o ./Debug/$debug_name.px
+	echo "$compilator $lib_path ./$project_folder/main.cpp ../no_communication.cpp ../shared_test.cpp $arch_file -o ./Debug/$debug_name.px"
+    $compilator $lib_path ./OnePointTime/main.cpp ../no_communication.cpp ../shared_test.cpp $arch_file -o ./Debug/$debug_name.px
 
 fi
 
@@ -65,8 +63,8 @@ if [ "$1" = "cpu" ]
 then
 	debug_name="onepoint_cpu"
 	project_folder="OnePointTime"
-	echo "$compilator $taskD $lib_path ./$project_folder/main.cpp ../cpu.cpp ../shared_test.cpp ../no_communication.cpp ../Three-phase/three-phase.cpp -o ./Debug/$debug_name.px"
-    $compilator $taskD $lib_path ./$project_folder/main.cpp ../cpu.cpp ../shared_test.cpp ../no_communication.cpp ../Three-phase/three-phase.cpp -o ./Debug/$debug_name.px
+	echo "$compilator $lib_path ./$project_folder/main.cpp ../cpu.cpp ../shared_test.cpp ../no_communication.cpp ../Three-phase/three-phase.cpp -o ./Debug/$debug_name.px"
+    $compilator $lib_path ./$project_folder/main.cpp ../cpu.cpp ../shared_test.cpp ../no_communication.cpp ../Three-phase/three-phase.cpp -o ./Debug/$debug_name.px
 fi
 
 mkdir ./Debug

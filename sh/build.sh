@@ -49,13 +49,12 @@ else 	if [ "$hostname" = "k100" ]; then
 	fi
 fi
 
-task_name="-D THREE_PHASE"
 project_file="three-phase.cpp"
 project_folder="Three-phase"
 
 if [ "$1" = "gpu" ]; then
-	echo "nvcc $task_name $debug -c -arch sm_$ARCH gpu.o ../gpu.cu"
-		  nvcc $task_name $debug -c -arch sm_$ARCH gpu.o ../gpu.cu
+	echo "nvcc $debug -c -arch sm_$ARCH gpu.o ../gpu.cu"
+		  nvcc $debug -c -arch sm_$ARCH gpu.o ../gpu.cu
 	arch_file="gpu.o"
 else if [ "$1" = "cpu" ]; then
 		arch_file="../cpu.cpp ../$project_folder/$project_file"
@@ -92,7 +91,7 @@ fi
 mkdir -p ../$project_folder/Debug
 exe_name="$exe_name.px"
 
-echo "$compilator $task_name $debug $lib_path ../main.cpp $comm_file $energy ../shared_test.cpp ../gauss.cpp $arch_file -o ../$project_folder/Debug/$exe_name"
-	  $compilator $task_name $debug $lib_path ../main.cpp $comm_file $energy ../shared_test.cpp ../gauss.cpp $arch_file -o ../$project_folder/Debug/$exe_name
+echo "$compilator $debug $lib_path ../main.cpp $comm_file $energy ../shared_test.cpp ../gauss.cpp $arch_file -o ../$project_folder/Debug/$exe_name"
+	  $compilator $debug $lib_path ../main.cpp $comm_file $energy ../shared_test.cpp ../gauss.cpp $arch_file -o ../$project_folder/Debug/$exe_name
 
 exit

@@ -6,13 +6,6 @@ double *DevBuffer;
 
 int main(int argc, char* argv[])
 {
-#ifdef GTEST
-	::testing::InitGoogleTest(&argc, argv);
-	RUN_ALL_TESTS();
-	//getchar();
-	//exit(1);
-#endif
-
 	consts def;
 	read_defines(argc, argv, &def);
 
@@ -258,15 +251,9 @@ void blocks_initialization(consts *def)
 // Функция вычисления "эффективной" плотности * g * hy
 double ro_eff_gdy(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
 {
-#ifdef THREE_PHASE
 	double ro_g_dy = (HostArraysPtr.ro_g[local] * (1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local])
 					+ HostArraysPtr.ro_w[local] * HostArraysPtr.S_w[local]
 					+ HostArraysPtr.ro_n[local] * HostArraysPtr.S_n[local]) * (HostArraysPtr.m[local]) * (def.g_const) * (def.hy);
-
-#else
-	double ro_g_dy = (HostArraysPtr.ro_n[local] * HostArraysPtr.S_n[local]
-	                  + HostArraysPtr.ro_w[local] * (1 - HostArraysPtr.S_n[local])) * (HostArraysPtr.m[local]) * (def.g_const) * (def.hy);
-#endif
 	return ro_g_dy;
 }
 
@@ -279,15 +266,7 @@ void print_task_name(const consts &def)
 	// Нулевой процессор выводит название запускаемой задачи
 	if (!(def.rank))
 	{
-#ifdef TWO_PHASE
-		char task_name[] = "Two phase filtration";
-#endif
-#ifdef THREE_PHASE
 		char task_name[] = "Three phase filtration";
-#endif
-#ifdef B_L
-		char task_name[] = "Backley-Leverett filtration";
-#endif
 		std::cout << task_name << " by CAPAZ on " << (def.size) << " node(s).\n";
 		read_version();
 		fflush(stdout);
@@ -330,12 +309,10 @@ void initialization(ptr_Arrays* HostArraysPtr, ptr_Arrays* DevArraysPtr, long in
 		data_initialization(*HostArraysPtr, time_counter, *def);    // (4)
 	}
 
-#ifdef THREE_PHASE
 	load_data_to_device((*HostArraysPtr).S_w, (*DevArraysPtr).S_w, *def);
 	load_data_to_device((*HostArraysPtr).roS_g_old, (*DevArraysPtr).roS_g_old, *def);
 	load_data_to_device((*HostArraysPtr).P_n, (*DevArraysPtr).P_n, *def);
 	load_data_to_device((*HostArraysPtr).P_g, (*DevArraysPtr).P_g, *def);
-#endif
 	load_data_to_device((*HostArraysPtr).P_w, (*DevArraysPtr).P_w, *def);
 	load_data_to_device((*HostArraysPtr).S_n, (*DevArraysPtr).S_n, *def);
 	load_data_to_device((*HostArraysPtr).roS_w_old, (*DevArraysPtr).roS_w_old, *def);
@@ -411,7 +388,6 @@ void host_memory_allocation(ptr_Arrays* ArraysPtr, const consts &def)
 		(*ArraysPtr).roS_n_old = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 		(*ArraysPtr).m = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 		(*ArraysPtr).K = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-#ifdef THREE_PHASE
 		(*ArraysPtr).P_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 		(*ArraysPtr).S_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 		(*ArraysPtr).ro_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
@@ -421,7 +397,6 @@ void host_memory_allocation(ptr_Arrays* ArraysPtr, const consts &def)
 		(*ArraysPtr).Xi_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 		(*ArraysPtr).roS_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 		(*ArraysPtr).roS_g_old = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-#endif
 #ifdef ENERGY
 		(*ArraysPtr).T = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 		(*ArraysPtr).H_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
@@ -462,7 +437,6 @@ void host_memory_free(const ptr_Arrays &ArraysPtr)
 	delete[] ArraysPtr.roS_n_old;
 	delete[] ArraysPtr.m;
 	delete[] ArraysPtr.K;
-#ifdef THREE_PHASE
 	delete[] ArraysPtr.P_g;
 	delete[] ArraysPtr.S_g;
 	delete[] ArraysPtr.ro_g;
@@ -472,7 +446,6 @@ void host_memory_free(const ptr_Arrays &ArraysPtr)
 	delete[] ArraysPtr.Xi_g;
 	delete[] ArraysPtr.roS_g;
 	delete[] ArraysPtr.roS_g_old;
-#endif
 #ifdef ENERGY
 	delete[] ArraysPtr.T;
 	delete[] ArraysPtr.H_w;
@@ -488,7 +461,6 @@ void host_memory_free(const ptr_Arrays &ArraysPtr)
 void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def)
 {
 	// Загрузка в память хоста результатов расчета
-#ifdef THREE_PHASE
 	load_data_to_host(HostArraysPtr.S_w, DevArraysPtr.S_w , def);
 	load_data_to_host(HostArraysPtr.ux_w, DevArraysPtr.ux_w , def);
 	load_data_to_host(HostArraysPtr.uy_w, DevArraysPtr.uy_w , def);
@@ -496,18 +468,15 @@ void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 	load_data_to_host(HostArraysPtr.ux_g, DevArraysPtr.ux_g , def);
 	load_data_to_host(HostArraysPtr.uy_g, DevArraysPtr.uy_g , def);
 	load_data_to_host(HostArraysPtr.uz_g, DevArraysPtr.uz_g , def);
-#endif
 	load_data_to_host(HostArraysPtr.P_w, DevArraysPtr.P_w , def);
 	load_data_to_host(HostArraysPtr.S_n, DevArraysPtr.S_n , def);
 	load_data_to_host(HostArraysPtr.ux_n, DevArraysPtr.ux_n , def);
 	load_data_to_host(HostArraysPtr.uy_n, DevArraysPtr.uy_n , def);
 	load_data_to_host(HostArraysPtr.uz_n, DevArraysPtr.uz_n , def);
 
-#ifndef THREE_PHASE
 	// Проверка на выход из допустимого диапазона значений P и S
 #ifdef MY_TEST
 	test_correct_P_S(HostArraysPtr, def);
-#endif
 #endif
 
 	// Нулевой процессор создает директории, файлы и прописывает заголовки файлов
@@ -579,61 +548,33 @@ void print_plots_top(double t, const consts &def)
 	{
 		if ((def.Nx) < 2)
 		{
-#ifdef THREE_PHASE
 #ifdef ENERGY
 			fprintf(fp, "VARIABLES = \"Y\",\"S_w\",\"S_n\",\"S_g\",\"P_w\",\"T\",\"uw_y\",\"un_y\",\"ug_y\",\"porosity\" \n");
 #else
 			fprintf(fp, "VARIABLES = \"Y\",\"S_w\",\"S_n\",\"S_g\",\"P_w\",\"uw_y\",\"un_y\",\"ug_y\",\"porosity\" \n");
-#endif
-#else
-			fprintf(fp, "VARIABLES = \"Y\",\"S_w\",\"P_w\",\"u_y\",\"porosity\" \n");
 #endif
 			fprintf(fp, "ZONE T = \"BIG ZONE\", K=%d, F = POINT\n", (def.Ny));
 		}
 		else 
 		{
 
-#ifdef THREE_PHASE
-			//		fprintf(fp,"VARIABLES = \"X\",\"Y\",\"S_w\",\"S_n\",\"S_g\",\"P_w\",\"u_x\",\"u_y\",\"porosity\" \n");
 #ifdef ENERGY
 			fprintf(fp, "VARIABLES = \"X\",\"Y\",\"S_w\",\"S_n\",\"S_g\",\"P_w\",\"T\",\"uw_x\",\"uw_y\",\"un_x\",\"un_y\",\"ug_x\",\"ug_y\",\"porosity\" \n");
 #else
 			fprintf(fp, "VARIABLES = \"X\",\"Y\",\"S_w\",\"S_n\",\"S_g\",\"P_w\",\"uw_x\",\"uw_y\",\"un_x\",\"un_y\",\"ug_x\",\"ug_y\",\"porosity\" \n");
-#endif
-#else
-			fprintf(fp, "VARIABLES = \"X\",\"Y\",\"S_w\",\"P_w\",\"u_x\", \"u_y\", \"porosity\" \n");
 #endif
 			fprintf(fp, "ZONE T = \"BIG ZONE\", K=%d,J=%d, F = POINT\n", (def.Nx), (def.Ny));
 		}
 	}
 	else
 	{
-#ifdef THREE_PHASE
-		//		fprintf(fp,"VARIABLES = \"X\",\"Y\",\"Z\",\"S_w\",\"S_n\",\"S_g\",\"P_w\",\"u_x\", \"u_y\",\"u_z\",\"porosity\" \n");
 #ifdef ENERGY
 		fprintf(fp, "VARIABLES = \"X\",\"Y\",\"Z\",\"S_w\",\"S_n\",\"S_g\",\"P_w\",\"T\",\"uw_x\",\"uw_y\",\"uw_z\",\"un_x\",\"un_y\",\"un_z\",\"ug_x\",\"ug_y\",\"ug_z\",\"porosity\" \n");
 #else
 		fprintf(fp, "VARIABLES = \"X\",\"Y\",\"Z\",\"S_w\",\"S_n\",\"S_g\",\"P_w\",\"uw_x\",\"uw_y\",\"uw_z\",\"un_x\",\"un_y\",\"un_z\",\"ug_x\",\"ug_y\",\"ug_z\",\"porosity\" \n");
 #endif
-#else
-		fprintf(fp, "VARIABLES = \"X\",\"Y\",\"Z\",\"S_n\",\"P_w\",\"u_x\", \"u_y\", \"u_z\", \"porosity\" \n");
-#endif
 		fprintf(fp, "ZONE T = \"BIG ZONE\", K=%d,J=%d,I=%d, F = POINT\n", (def.Nx), (def.Ny), (def.Nz));
 	}
-
-#ifdef B_L_1
-	char fname_xz[30];
-	FILE *fp_xz;
-
-	sprintf(fname_xz, "plots/xz=%012.4f.dat", t);
-	if (!(fp_xz = fopen(fname_xz, "wt")))
-		print_error("Not open file(s) in function SAVE_DATA_PLOTS", __FILE__, __LINE__);
-
-	fprintf(fp_xz, "TITLE =  \"Filtration in time=%5.2f\" \n", t);
-	fprintf(fp_xz, "VARIABLES = \"X\",\"Y\",\"S_n\",\"P_w\",\"porosity1\", \"porosity2\",\"porosity3\" \n");
-	fprintf(fp_xz, "ZONE T = \"BIG ZONE\", K=%d,J=%d, F = POINT\n", (def.Nx), (def.Nz));
-	fclose(fp_xz);
-#endif
 
 	fclose(fp);
 }
@@ -668,33 +609,6 @@ void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, i
 	}
 
 	fclose(fp);
-
-#ifdef B_L_1
-	char fname_xz[30];
-	FILE *fp_xz;
-
-	sprintf(fname_xz, "plots/xz=%012.4f.dat", t);
-
-	if (!(fp_xz = fopen(fname_xz, "at")))
-		print_error("Not open file(s) in function SAVE_DATA_PLOTS", __FILE__, __LINE__);
-
-	for (int i = 0; i < def.locNx; i++)
-		for (int k = 0; k < def.locNz; k++)
-		{
-			int j1=def.locNz/3;
-			int j2=def.locNz/2;
-			int j3=def.locNz/3*2;
-			// Если is_active_point(i, j1, k, def) правда, то и для j2, j3 тоже правда
-				if (is_active_point(i, j1, k, def))
-				{
-					local = i + j2 * def.locNx + k * def.locNx * def.locNy;
-					int I = local_to_global(i, 'x', def);
-
-					fprintf(fp_xz, "%.2e %.2e %.3e %.3e %.3e %.3e %.3e\n", I * (def.hx), K * (def.hz), HostArraysPtr.S_n[local], HostArraysPtr.P_w[local], HostArraysPtr.K[i + j1 * def.locNx + k * def.locNx * def.locNy], HostArraysPtr.K[i + j2 * def.locNx + k * def.locNx * def.locNy], HostArraysPtr.K[i + j3 * def.locNx + k * def.locNx * def.locNy]); // (1)
-				}
-		}
-	fclose(fp_xz);
-#endif
 }
 
 // Функция записи строчки значений параметров, которые нужны для построения графиков,  для всех задач.
@@ -712,7 +626,6 @@ void print_plot_row(const ptr_Arrays &HostArraysPtr, FILE* fp, int i, int j, int
 	int J = def.Ny - 1 - local_to_global(j, 'y', def);
 	int K = local_to_global(k, 'z', def); 
 
-#ifdef THREE_PHASE
 	if (def.Nz < 2)
 	{
 		if (def.Nx < 2)	
@@ -767,104 +680,6 @@ void print_plot_row(const ptr_Arrays &HostArraysPtr, FILE* fp, int i, int j, int
 				HostArraysPtr.ux_g[local], HostArraysPtr.uz_g[local], (-1)*HostArraysPtr.uy_g[local], HostArraysPtr.m[local]);
 #endif
 	}
-#endif
-#ifdef TWO_PHASE
-	if (def.Nz < 2)
-	{
-		fprintf(fp, "%.2e %.2e %.3e %.3e %.3e %.3e %.3e\n", I * (def.hx), J * (def.hy), HostArraysPtr.S_n[local], HostArraysPtr.P_w[local], HostArraysPtr.ux_n[local], (-1)*HostArraysPtr.uy_n[local], HostArraysPtr.m[local]); // (1)
-
-	}
-	else
-	{
-		fprintf(fp, "%.2e %.2e %.2e %.3e %.3e %.3e %.3e %.3e %.3e\n", I * (def.hx), K * (def.hz), J * (def.hy), HostArraysPtr.S_n[local], HostArraysPtr.P_w[local], HostArraysPtr.ux_n[local], HostArraysPtr.uz_n[local], (-1)*HostArraysPtr.uy_n[local], HostArraysPtr.m[local]); // (1)
-	}
-#endif
-#ifdef B_L
-	if (def.Nz < 2)
-	{
-		fprintf(fp, "%.2e %.2e %.3e %.3e %.3e %.3e %.3e\n", I * (def.hx), J * (def.hy), 1.-HostArraysPtr.S_n[local], HostArraysPtr.P_w[local], HostArraysPtr.ux_n[local], HostArraysPtr.uy_n[local], HostArraysPtr.K[local]); // (1)
-
-	}
-	else
-	{
-		fprintf(fp, "%.2e %.2e %.2e %.3e %.3e %.3e %.3e %.3e %.3e\n", I * (def.hx), K * (def.hz), J * (def.hy), 1-HostArraysPtr.S_n[local], HostArraysPtr.P_w[local], HostArraysPtr.ux_n[local], HostArraysPtr.uz_n[local], (-1)*HostArraysPtr.uy_n[local], HostArraysPtr.K[local]); // (1)
-	}
-#endif
-}
-
-// Функция сохранения данных в файлы графиков формата BjnIO [http://lira.imamod.ru/BjnIO_3D.html]
-void print_plots_BjnIO(const ptr_Arrays &HostArraysPtr, double t, const consts &def)
-{
-	/*
-		char *dname;
-		char *targetfuncs="r2d.bjn";
-		char *targetgrid="r2dgrid.bjn";
-		LPLPLPFLOAT F1;
-		double *F1D;
-
-		F1 = alloc_float_mas_n1_n2_n3(def.locNx, def.locNy, def.locNz);
-		if(F1 == NULL) exit(0);
-
-		F1D = (double *)malloc(def.locNx, def.locNy, def.locNz*sizeof(double));
-		if(F1D == NULL) exit(0);
-
-		// Инициализация файла с данными функции
-		int err = WriteBjnGzippedScalar8RecInit(targetfuncs, "r2dgrid.bjn", def.Nx, def.Ny, def.Nz);
-		if(err)
-			fprintf(stderr, "Can't create file %s.\n", targetfuncs);
-
-		// Запись блока данных значений функции
-		err = WriteBjnGzippedScalar8RecFuncByBlock(targetfuncs, "S_n", F1D, def.locNx*(def.rank), 0, 0, def.locNx, def.locNy, def.locNz, 5); // Поправить def.locNx*(def.rank) на точное смещение
-		if(err)
-			fprintf(stderr, "Can't add func block data err %d\n", err);
-
-		// Запись минимального и максимального значения сеточной функции S_n
-		err = WriteBjnGzippedScalar8RecFuncMinMax(targetfuncs, "S_n", 0, 1);
-		if(err)
-			fprintf(stderr, "Can't add data about block err %d\n", err);
-
-		// Инициализация файла сетки
-		err = WriteBjnGzippedScalar8RecInit(targetgrid, "", def.Nx, def.Ny, def.Nz);
-		if(err)
-			fprintf(stderr, "Can't create file %s.\n", targetgrid);
-
-		// Для каждого из направлений
-		for(direct=0;direct<3;direct++)
-		{
-			for(i1=0; i1<m1; i1++)
-				for(i2=0; i2<m2; i2++)
-					for(i3=0; i3<m3; i3++)
-					{
-						for(i=0; i<n1; i++)
-							for(j=0; j<n2; j++)
-								for(k=0; k<n3; k++)
-								{
-									float x=(float)i1*(float)n1+(float)i;
-									float y=(float)i2*(float)n2+(float)j;
-									float z=(float)i3*(float)n3+(float)k;
-									switch(direct)
-									{
-										case 0: F1[i][j][k] = (float)x; dname="x"; break;
-										case 1: F1[i][j][k] = (float)y; dname="y"; break;
-										case 2: F1[i][j][k] = (float)(ffmin+k*(ffmax-ffmin)/3.f); dname="z"; break;
-									}
-
-									fmin=minab(fmin,F1[i][j][k]);
-									fmax=maxab(fmax,F1[i][j][k]);
-								}
-
-					// Запись блока данных сетки
-					err = WriteBjnGzippedScalar8RecFuncByBlock(targetgrid, dname, F1, def.locNx*(def.rank), 0, 0, def.locNx, def.locNy, def.locNz, 9); // Поправить def.locNx*(def.rank) на точное смещение
-					if(err)
-						fprintf(stderr, "Can't add grid `%s` block data err %d\n", dname, err);
-					}
-
-			// Запись максимального и минимального значений сетки
-			err = WriteBjnGzippedScalar8RecFuncMinMax(targetgrid, dname, fmin, fmax);
-			if(err)
-				fprintf(stderr, "Can't add data about block err %d\n", err);
-		}
-	*/
 }
 
 // Функция вывода на экран двумерного массива(для тестирования пересылок)
@@ -930,133 +745,23 @@ void print_array_console(double* Arr, const consts &def, char axis)
 // Функция загрузки файла проницаемостей
 void load_permeability(double* K, const consts &def)
 {
-#ifndef LOAD_K_FROM_FILE
 	for (int i = 0; i < def.locNx; i++)
 		for (int j = 0; j < def.locNy; j++)
 			for (int k = 0; k < def.locNz; k++)
 				K[i + j * def.locNx + k * def.locNx * def.locNy] = def.K[0];
-#else
-	FILE *input;
-	char *file = "../noise.dat";
 
-	if (!(input = fopen(file, "rt")))
-	{
-		file = "noise.dat";
-		if (!(input = fopen(file, "rt")))
-		{
-			char err[60];
-			sprintf(err, "Not open file \"%s\", using value from def.K[0]\n", file);
-			std::cout << err;
-			//print_error(error, __FILE__, __LINE__);
-
-			for (int i = 0; i < def.locNx; i++)
-				for (int j = 0; j < def.locNy; j++)
-					for (int k = 0; k < def.locNz; k++)
-						K[i + j * def.locNx + k * def.locNx * def.locNy] = def.K[0];
-			return;
-
-		}
-	}
-
-	int Nx, Ny, Nz;
-	if (def.Nz < 2)
-	{
-		fscanf(input, "%d %d\n", &Nx, &Ny);
-		Nz=1;
-	}
-	else
-		fscanf(input, "%d %d %d\n", &Nx, &Ny, &Nz);
-
-	if ((Nx != def.Nx) || (Ny != def.Ny) || (Nz != def.Nz))
-	{
-		printf("Warning: Nx/Ny/Nz from noise.dat not equal\nError in file \"%s\" at line %d\n", __FILE__, __LINE__);
-		fflush(stdout);
-	}
-
-	/*
-	// Версия для считывания файлов SPE-10 
-	double s[6];
-	long int row = 0, bigN = 0;
-	int index = 0;
-	int six = 6;
-
-	while (row * six < def.Nx * (def.Ny) * (def.Nz))
-	{
-		fscanf(input, "%lf %lf %lf %lf %lf %lf\n", s, s + 1, s + 2, s + 3, s + 4, s + 5);
-
-		for (index = 0; index < six; index++)
-		{
-			bigN = six * row + index;
-			int i = bigN % def.Nx;
-			int k = (bigN / def.Nx) % def.Nz;
-			int j = bigN / (def.Nz * (def.Nx));
-
-			//K[i + j * def.Nx + k * def.Nx * def.Ny] = 6.64e-11+ s[index] * 10e-13;
-			//K[i + j * def.Nx + k * def.Nx * def.Ny] = s[index];
-			K[i+j*def.locNx+k*def.locNx*def.locNy]=1e-10 * exp(s[index]);
-		}
-		row++;
-	}
-
-	fclose(input);
-	*/
-/*
 	for (int i = 0; i < def.locNx; i++)
 		for (int j = 0; j < def.locNy; j++)
 			for (int k = 0; k < def.locNz; k++)
-			{
-				std::cout << "m[" << i << ","<< j << "," << k <<"] = " << m[i + j * def.locNx + k * def.locNx * def.locNy] << "\n";
-			}
-*/
-
-	// версия для считывания файлов от Антона
-	char* str=new char[30*Nx];
-
-	char value[30];
-	for(int j=0; j<Ny; j++)
-	{
-		int n=0;
-		fgets(str,30*Nx,input);
-		for(int i=0; i<Nx; i++)
-		{
-			int iter=0;
-			if(str[n]==' ')
-				n++;
-			for (n;str[n]!=' ';n++,iter++)
-			{
-				value[iter]=str[n];
-			}
-			value[iter]='\0';
-			n++;
-
-			for (int k=0;k<def.locNz;k++)
-				K[i+j*def.locNx+k*def.locNx*def.locNy]=1e-10 * exp(atof(value)) * pow(def.upscale_l, 2);
-		}
-}
-
-fclose(input);
-#endif
-
-for (int i = 0; i < def.locNx; i++)
-	for (int j = 0; j < def.locNy; j++)
-		for (int k = 0; k < def.locNz; k++)
-			test_positive(K[i+j*def.locNx+k*def.locNx*def.locNy], __FILE__, __LINE__);
-
+				test_positive(K[i+j*def.locNx+k*def.locNx*def.locNy], __FILE__, __LINE__);
 }
 
 // Сохранение состояния в файл
 void save(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, long int time_counter, const consts &def)
 {
-	// Загружаем в память хоста данные по roS_old
-	// P1 и S2 загружены уже для функции сохранения графиков,
-	// x,y и porosity не изменились и загрузки не требуют.
-	//load_data_to_host(HostArraysPtr.P1, DevArraysPtr.P1 , localNx);
-	//load_data_to_host(HostArraysPtr.S2, DevArraysPtr.S2 , localNx);
 	load_data_to_host(HostArraysPtr.roS_w_old, DevArraysPtr.roS_w_old , def);
 	load_data_to_host(HostArraysPtr.roS_n_old, DevArraysPtr.roS_n_old , def);
-#ifdef THREE_PHASE
 	load_data_to_host(HostArraysPtr.roS_g_old, DevArraysPtr.roS_n_old , def);
-#endif
 
 	FILE *f_save;
 
@@ -1087,19 +792,12 @@ void save(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, long 
 				print_error("Not open file \"save.dat\"", __FILE__, __LINE__);
 
 			fwrite(&time_counter, sizeof(int), 1, f_save);
-#ifdef THREE_PHASE
 			fwrite(HostArraysPtr.S_w, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-#endif
 			fwrite(HostArraysPtr.P_w, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
 			fwrite(HostArraysPtr.S_n, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			//fwrite(HostArraysPtr.x, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			//fwrite(HostArraysPtr.y, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			//fwrite(HostArraysPtr.z, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
 			fwrite(HostArraysPtr.roS_w_old, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
 			fwrite(HostArraysPtr.roS_n_old, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-#ifdef THREE_PHASE
 			fwrite(HostArraysPtr.roS_g_old, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-#endif
 			fwrite(HostArraysPtr.m, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
 			fclose(f_save);
 		}
@@ -1137,19 +835,12 @@ void restore(const ptr_Arrays &HostArraysPtr, long int* time_counter, const cons
 				def_tmp.rank = queue;
 				global_to_local_vars(&def_tmp);
 				fread(time_counter, sizeof(int), 1, f_save);
-#ifdef THREE_PHASE
 				fread(HostArraysPtr.S_w, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-#endif
 				fread(HostArraysPtr.P_w, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
 				fread(HostArraysPtr.S_n, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				//fread(HostArraysPtr.x, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				//fread(HostArraysPtr.y, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				//fread(HostArraysPtr.z, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
 				fread(HostArraysPtr.roS_w_old, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
 				fread(HostArraysPtr.roS_n_old, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-#ifdef THREE_PHASE
 				fread(HostArraysPtr.roS_g_old, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-#endif
 				fread(HostArraysPtr.m, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
 			}
 			fclose(f_save);
@@ -1224,70 +915,11 @@ void resize_defines(consts* def, double l, double t)
 	def->tau *= t;
 	def->timeX *= t;
 
-#ifdef THREE_PHASE
 	def->beta_g *= (l*l)/m;
 	def->ro0_g *= m/(pow(l,3));
 	def->c_g *= l/t;
 	def->mu_g *= m*t/(l*l);
-#endif
 }
-
-#ifdef GTEST
-// Тест функции resize_defines
-TEST(Main,ResizeDefines)
-{
-	consts tdef;
-	tdef.hx = 1.;
-	tdef.hy = 1.;
-	tdef.P_atm = 1.;
-	tdef.Background_Pw = 1.;
-	tdef.OutWell_Pw = 1.;
-	tdef.InjWell_Pw = 1.;
-	tdef.dt = 1.;
-	tdef.beta_n = 1.;
-	tdef.beta_w = 2.;
-	tdef.g_const = 9.8;
-	tdef.K[0] = 1;
-	tdef.K[1] = 0.3;
-	tdef.Q = 1.;
-	tdef.mu_n = 1.;
-	tdef.mu_w = 0.5;
-	tdef.ro0_w = 1000.;
-	tdef.ro0_n = 800.;
-	tdef.l = 1e-5;
-	tdef.c_n = 1.;
-	tdef.c_w = 5.;
-	tdef.tau = 1.;
-	tdef.timeX = 100;
-
-	resize_defines(&tdef, 0.1, 0.01);
-	EXPECT_DOUBLE_EQ(0.1, tdef.hx);
-	EXPECT_DOUBLE_EQ(0.1, tdef.hy);
-	EXPECT_DOUBLE_EQ(0.01, tdef.dt);
-	EXPECT_DOUBLE_EQ(100., tdef.P_atm);
-	EXPECT_DOUBLE_EQ(100., tdef.Background_Pw);
-	EXPECT_DOUBLE_EQ(100., tdef.OutWell_Pw);
-	EXPECT_DOUBLE_EQ(100., tdef.InjWell_Pw);
-	EXPECT_DOUBLE_EQ(0.01, tdef.beta_n);
-	EXPECT_DOUBLE_EQ(0.02, tdef.beta_w);
-	EXPECT_DOUBLE_EQ(9800, tdef.g_const);
-	EXPECT_DOUBLE_EQ(1e-2, tdef.K[0]);
-	EXPECT_DOUBLE_EQ(3e-3, tdef.K[1]);
-	EXPECT_DOUBLE_EQ(1e5, tdef.Q);
-	EXPECT_DOUBLE_EQ(1, tdef.mu_n);
-	EXPECT_DOUBLE_EQ(0.5, tdef.mu_w);
-	EXPECT_DOUBLE_EQ(1e6, tdef.ro0_w);
-	EXPECT_DOUBLE_EQ(8e5, tdef.ro0_n);
-	EXPECT_DOUBLE_EQ(1e-6, tdef.l);
-	EXPECT_DOUBLE_EQ(50, tdef.c_w);
-	EXPECT_DOUBLE_EQ(10, tdef.c_n);
-	EXPECT_DOUBLE_EQ(0.01, tdef.tau);
-	EXPECT_DOUBLE_EQ(1, tdef.timeX);
-	EXPECT_DOUBLE_EQ(0.1, tdef.upscale_l);
-	EXPECT_DOUBLE_EQ(0.01, tdef.upscale_t);
-}
-#endif
-
 
 // Считывание параметров задачи из файла
 void read_defines(int argc, char *argv[], consts* def)
@@ -1448,49 +1080,41 @@ void read_defines(int argc, char *argv[], consts* def)
 			def->S_wr[1] = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "Q"))
 		{
 			def->Q = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "BACKGROUND_Pw"))
 		{
 			def->Background_Pw = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "BACKGROUND_Sn"))
 		{
 			def->Background_Sn = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "INJECTION_WELL_Pw"))
 		{
 			def->InjWell_Pw = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "INJECTION_WELL_Sn"))
 		{
 			def->InjWell_Sn = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "OUTPUT_WELL_Pw"))
 		{
 			def->OutWell_Pw = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "OUTPUT_WELL_Sn"))
 		{
 			def->OutWell_Sn = atof(attr_value);
 			continue;
 		}
-
 		if (!strcmp(attr_name, "K_0"))
 		{
 			def->K[0] = atof(attr_value);
@@ -1502,20 +1126,6 @@ void read_defines(int argc, char *argv[], consts* def)
 			continue;
 		}
 
-#ifdef TWO_PHASE
-		if (!strcmp(attr_name, "P_D_0"))
-		{
-			def->P_d[0] = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "P_D_1"))
-		{
-			def->P_d[1] = atof(attr_value);
-			continue;
-		}
-#endif
-
-#ifdef THREE_PHASE
 		if (!strcmp(attr_name, "C_G"))
 		{
 			def->c_g = atof(attr_value);
@@ -1591,7 +1201,6 @@ void read_defines(int argc, char *argv[], consts* def)
 			def->S_gr[1] = atof(attr_value);
 			continue;
 		}
-#endif
 		if (!strcmp(attr_name, "S_N_GR"))
 		{
 			def->S_n_gr = atof(attr_value);

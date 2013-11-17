@@ -243,11 +243,9 @@ void exchange(double* HostArrayPtr, double* DevArrayPtr, double* HostBuffer, dou
 // Обмен граничными значениями давления P2, плотностей ro1 и ro2, Xi между процессорами
 void P_ro_Xi_exchange(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def)
 {
-#ifdef THREE_PHASE
 	exchange(HostArraysPtr.ro_g, DevArraysPtr.ro_g, HostBuffer, DevBuffer, def);
 	exchange(HostArraysPtr.Xi_g, DevArraysPtr.Xi_g, HostBuffer, DevBuffer, def);
 	exchange(HostArraysPtr.P_g, DevArraysPtr.P_g, HostBuffer, DevBuffer, def);
-#endif
 	exchange(HostArraysPtr.P_n, DevArraysPtr.P_n, HostBuffer, DevBuffer, def);
 	exchange(HostArraysPtr.ro_w, DevArraysPtr.ro_w, HostBuffer, DevBuffer, def);
 	exchange(HostArraysPtr.ro_n, DevArraysPtr.ro_n, HostBuffer, DevBuffer, def);
@@ -265,29 +263,23 @@ void u_exchange(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr,
 	exchange_direct(HostArraysPtr.ux_n, DevArraysPtr.ux_n, HostBuffer, DevBuffer, def, 'x');
 	exchange_direct(HostArraysPtr.uy_w, DevArraysPtr.uy_w, HostBuffer, DevBuffer, def, 'y');
 	exchange_direct(HostArraysPtr.uy_n, DevArraysPtr.uy_n, HostBuffer, DevBuffer, def, 'y');
-#ifdef THREE_PHASE
 	exchange_direct(HostArraysPtr.ux_g, DevArraysPtr.ux_g, HostBuffer, DevBuffer, def, 'x');
 	exchange_direct(HostArraysPtr.uy_g, DevArraysPtr.uy_g, HostBuffer, DevBuffer, def, 'y');
-#endif
 
 	if((def).Nz >= 2)
 	{
 		exchange_direct(HostArraysPtr.uz_w, DevArraysPtr.uz_w, HostBuffer, DevBuffer, def, 'z');
 		exchange_direct(HostArraysPtr.uz_n, DevArraysPtr.uz_n, HostBuffer, DevBuffer, def, 'z');
-#ifdef THREE_PHASE
 		exchange_direct(HostArraysPtr.uz_g, DevArraysPtr.uz_g, HostBuffer, DevBuffer, def, 'z');
-#endif
 	}
 }
 
 // Обмен граничными значениями давления воды P1 и насыщенности NAPL S2 между процессорами
 void P_S_exchange(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def)
 {
-#ifdef THREE_PHASE
 	exchange(HostArraysPtr.S_w, DevArraysPtr.S_w, HostBuffer, DevBuffer, def);
 #ifdef ENERGY
 	exchange(HostArraysPtr.T, DevArraysPtr.T, HostBuffer, DevBuffer, def);
-#endif
 #endif
 	exchange(HostArraysPtr.P_w, DevArraysPtr.P_w, HostBuffer, DevBuffer, def);
 	exchange(HostArraysPtr.S_n, DevArraysPtr.S_n, HostBuffer, DevBuffer, def);

@@ -2,23 +2,6 @@
 
 // Тестирование
 
-// Проверка на предопределение макроса задачи
-#ifndef THREE_PHASE
-#ifndef TWO_PHASE
-#ifndef B_L
-#error "Task DEFINE is not found."
-#endif
-#endif
-#endif
-
-#ifdef GTEST
-// "Тестовый тест" google test'а
-TEST(FirstClass,Summ)
-{
-	EXPECT_EQ(4, 2+2);
-}
-#endif
-
 // Функция, вызываемая при ошибке
 void print_error(char *error, char *file, int line)
 {
@@ -37,18 +20,12 @@ void print_error(char *error, char *file, int line)
 
 void test_correct_P_S(const ptr_Arrays &HostArraysPtr, const consts &def)
 {
-#ifdef TWO_PHASE_1
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
 			{
-				test_S(HostArraysPtr.S_n[i + j * (def.locNx) + k * (def.locNx) * (def.locNy)], __FILE__, __LINE__);
-				test_positive(HostArraysPtr.P_w[i + j * (def.locNx) + k * (def.locNx) * (def.locNy)], __FILE__, __LINE__);
-				test_nan(HostArraysPtr.ux_n[i + j * (def.locNx) + k * (def.locNx) * (def.locNy)], __FILE__, __LINE__);
-				test_nan(HostArraysPtr.uy_n[i + j * (def.locNx) + k * (def.locNx) * (def.locNy)], __FILE__, __LINE__);
-				test_nan(HostArraysPtr.uz_n[i + j * (def.locNx) + k * (def.locNx) * (def.locNy)], __FILE__, __LINE__);
+				;// TODO: test values
 			}
-#endif
 }
 
 // Тест на NaN
@@ -203,22 +180,11 @@ void read_defines_test(const consts &def)
 	test_positive(def.Ny, __FILE__, __LINE__);
 	test_positive(def.Nz, __FILE__, __LINE__);
 
-#ifdef B_L
-	test_positive(def.Q, __FILE__, __LINE__);
-	test_positive(def.Background_Pw, __FILE__, __LINE__);
-	test_S(def.Background_Sn, __FILE__, __LINE__);
-	test_positive(def.InjWell_Pw, __FILE__, __LINE__);
-	test_S(def.InjWell_Sn, __FILE__, __LINE__);
-	test_positive(def.OutWell_Pw, __FILE__, __LINE__);
-	test_S(def.OutWell_Sn, __FILE__, __LINE__);
-#endif
-#ifdef THREE_PHASE
 	test_positive(def.c_g, __FILE__, __LINE__);
 	test_positive(def.beta_g, __FILE__, __LINE__);
 	test_positive(def.ro0_g, __FILE__, __LINE__);
 	test_positive(def.mu_g, __FILE__, __LINE__);
 	test_S(def.S_w_gr, __FILE__, __LINE__);
-#endif
 	test_S(def.S_n_gr, __FILE__, __LINE__);
 #endif
 

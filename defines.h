@@ -1,26 +1,10 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
-#ifdef B_L
-#define LOAD_K_FROM_FILE
-#endif
-//#define GTEST
+#define VERSION "1.0"
 
-#ifdef GTEST
-#include "gtest/gtest.h"
-#endif
-
-#define VERSION "0.55"
-
-#ifdef TWO_PHASE
-//Если 1, то считать двухслойной РС
-#define TWO_LAYERS 0
-// Считать направленными разностями (если не определена NR, то считается без них)
-#define NR
-#else
 #define TWO_LAYERS 1
 #define NR
-#endif
 
 // Учитывать ли тепловые процессы
 // #define ENERGY
@@ -69,9 +53,7 @@ struct ptr_Arrays_tag
 {
 	double *S_n, *S_w, *P_w, *P_n, *ro_w, *ro_n, *ux_w, *uy_w, *uz_w, *ux_n, *uy_n, *uz_n, *Xi_w, *Xi_n, *roS_w, *roS_w_old, *roS_n, *roS_n_old;
 	double *m, *K;
-#ifdef THREE_PHASE
 	double *S_g, *P_g, *ro_g, *ux_g, *uy_g, *uz_g, *Xi_g, *roS_g, *roS_g_old;
-#endif
 #ifdef ENERGY
 	double *T, *H_w, *H_n, *H_g, *H_r, *E, *E_new;
 #endif
@@ -94,17 +76,12 @@ struct consts_tag
 	int source, save_plots, print_screen, newton_iterations;
 	double K[2];
 	double Q, InjWell_Pw, InjWell_Sn, OutWell_Pw, OutWell_Sn, Background_Sn, Background_Pw; // Дебит скважины
-#ifdef TWO_PHASE
-	double P_d[2];
-#endif
-#ifdef THREE_PHASE
 	double S_w_init, S_n_init;
 	double S_nr[2];
 	double S_gr[2];
 	double P_d_nw[2];
 	double P_d_gn[2];
 	double c_g, beta_g, mu_g, ro0_g, S_w_gr;
-#endif
 	// Локальные размеры
 	int locNx, locNy, locNz;
 	// Число процессоров и ранг процессора
@@ -160,10 +137,7 @@ extern void read_version(void);
 extern void print_error(char *error, char *file, int line);
 
 // Unit-тесты
-#ifndef THREE_PHASE
 extern void test_correct_P_S(const ptr_Arrays &HostArraysPtr, const consts &def);
-#endif
-
 extern void test_nan(double x, char *file, int line);
 extern void test_positive(double x, char *file, int line);
 extern void test_S(double S, char *file, int line);
