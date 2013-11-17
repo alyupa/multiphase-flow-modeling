@@ -92,6 +92,8 @@ struct consts_tag
 	int rankx, ranky, rankz;
 	// Количество блоков ускорителя
 	int blocksX, blocksY, blocksZ;
+	// Plots directory name
+	char plots_dir[32];
 };
 typedef struct consts_tag consts;
 

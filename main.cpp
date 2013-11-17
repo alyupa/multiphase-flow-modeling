@@ -523,16 +523,16 @@ void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 // Функция создания директорий, файлов для графиков и сохранения заголовков в них
 void print_plots_top(double t, const consts &def)
 {
-	char fname[30];
+	char fname[64];
 	FILE *fp;
 
-	sprintf(fname, "plots/S=%012.4f.dat", t);
-
 #ifdef _WIN32
-	_mkdir("plots");
+	_mkdir(def.plots_dir);
 #else
-	mkdir("plots", 0000777);
+	mkdir(def.plots_dir, 0000777);
 #endif
+
+	sprintf(fname, "%s/S=%012.4f.dat", def.plots_dir, t);
 
 	// Создание (или перезапись) файла с графиками
 	// 1. Для распределения насыщенностей NAPL S_n
@@ -584,10 +584,10 @@ void print_plots_top(double t, const consts &def)
 // Если же есть, но хочется писать в файл в простой последовательности, то должно быть I=J=-1
 void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, int I, int J)
 {
-	char fname[30];
+	char fname[64];
 	FILE *fp;
 
-	sprintf(fname, "plots/S=%012.4f.dat", t);
+	sprintf(fname, "%s/S=%012.4f.dat", def.plots_dir, t);
 
 	// Открытие на дозапись и сохранение графиков
 	if (!(fp = fopen(fname, "at")))
@@ -1222,6 +1222,13 @@ void read_defines(int argc, char *argv[], consts* def)
 		if (!strcmp(attr_name, "SAVE_PLOTS"))
 		{
 			def->save_plots = atoi(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "PLOTS_DIR"))
+		{
+			strcpy(def->plots_dir, attr_value);
+			// TODO: check attr_value length in case of string
+			def->plots_dir[strlen(attr_value) - 2] = '\0';
 			continue;
 		}
 		if (!strcmp(attr_name, "PRINT_SCREEN"))

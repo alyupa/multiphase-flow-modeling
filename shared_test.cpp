@@ -175,6 +175,7 @@ void read_defines_test(const consts &def)
 	test_positive(def.newton_iterations, __FILE__, __LINE__);
 	test_positive(def.timeX, __FILE__, __LINE__);
 	test_positive(def.save_plots, __FILE__, __LINE__);
+	test_positive(strlen(def.plots_dir), __FILE__, __LINE__);
 	test_positive(def.print_screen, __FILE__, __LINE__);
 	test_positive(def.Nx, __FILE__, __LINE__);
 	test_positive(def.Ny, __FILE__, __LINE__);
