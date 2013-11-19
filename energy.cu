@@ -73,10 +73,10 @@ __device__ double lambda_r (double T)
 // Эффективный коэффициент теплопроводности в точке (будет использоваться при расчете теплового потока)
 __device__ double assign_lambda_eff (ptr_Arrays DevArraysPtr, int local)
 {
-	return DevArraysPtr.m[local] * (DevArraysPtr.S_w[local] * lambda_w (DevArraysPtr.T[local], def)
-		+ DevArraysPtr.S_n[local] * lambda_n (DevArraysPtr.T[local], def)
-		+ DevArraysPtr.S_g[local] * lambda_g (DevArraysPtr.T[local], def)) 
-		+ (1. - DevArraysPtr.m[local]) * lambda_r (DevArraysPtr.T[local], def);
+	return DevArraysPtr.m[local] * (DevArraysPtr.S_w[local] * lambda_w (DevArraysPtr.T[local])
+		+ DevArraysPtr.S_n[local] * lambda_n (DevArraysPtr.T[local])
+		+ DevArraysPtr.S_g[local] * lambda_g (DevArraysPtr.T[local])) 
+		+ (1. - DevArraysPtr.m[local]) * lambda_r (DevArraysPtr.T[local]);
 }
 
 // Расчет энтальпии по температуре и теплоемкости
@@ -89,19 +89,19 @@ __device__ double assign_H_w (double T)
 
 	h_temp = (T - T_0) / N_temp;
 	
-	integral += (def.P_atm / def.ro0_w);
-	integral += с_w(T_0, def);
-	integral += с_w(T, def);
+	integral += (gpu_def->P_atm / gpu_def->ro0_w);
+	integral += с_w(T_0);
+	integral += с_w(T);
 
 	for(int i = 2; i < N_temp; i+=2)
-		sum += с_w(T_0 + i * h_temp, def);
+		sum += с_w(T_0 + i * h_temp);
 
 	sum *= 2;
 	integral += sum;
 	sum = 0;
 
 	for(int i = 1; i < N_temp; i+=2)
-		sum += с_w(T_0 + i * h_temp, def);
+		sum += с_w(T_0 + i * h_temp);
 
 	sum *= 4;
 	integral += sum;
@@ -111,22 +111,22 @@ __device__ double assign_H_w (double T)
 
 	return integral;
 	*/
-	return (def.P_atm / def.ro0_w) + (T - T_0) * (c0_w - (T - T_0) * (C_w / 2 + C_w2 * (T - T_0) / 3));
+	return (gpu_def->P_atm / gpu_def->ro0_w) + (T - T_0) * (c0_w - (T - T_0) * (C_w / 2 + C_w2 * (T - T_0) / 3));
 }
 
 __device__ double assign_H_n (double T)
 {
-	return (def.P_atm / def.ro0_n) + (T - T_0) * (c0_n + C_n * (T - T_0) / 2);
+	return (gpu_def->P_atm / gpu_def->ro0_n) + (T - T_0) * (c0_n + C_n * (T - T_0) / 2);
 }
 
 __device__ double assign_H_g (double T)
 {
-	return (def.P_atm / def.ro0_g) + (T - T_0) * (c0_g + C_g * (T - T_0) / 2);
+	return (gpu_def->P_atm / gpu_def->ro0_g) + (T - T_0) * (c0_g + C_g * (T - T_0) / 2);
 }
 
 __device__ double assign_H_r (double T)
 {
-	return (def.P_atm / ro_r) + (T - T_0) * (c0_r + C_r * (T - T_0) / 2);
+	return (gpu_def->P_atm / ro_r) + (T - T_0) * (c0_r + C_r * (T - T_0) / 2);
 }
 
 __global__ void assign_H (ptr_Arrays DevArraysPtr, int local)
@@ -149,13 +149,13 @@ __device__ double ro(double P, double T, char phase)
 	switch (phase)
 	{
 	case 'w':
-		result_ro = def.ro0_w * (1. + (def.beta_w) * (P - def.P_atm) - alfa_w * (T - T_0));
+		result_ro = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (P - gpu_def->P_atm) - alfa_w * (T - T_0));
 		break;
 	case 'n':
-		result_ro = def.ro0_n * (1. + (def.beta_n) * (P - def.P_atm) - alfa_n * (T - T_0));
+		result_ro = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (P - gpu_def->P_atm) - alfa_n * (T - T_0));
 		break;
 	case 'g':
-		result_ro = def.ro0_g * (P / def.P_atm) * (T_0 / T);
+		result_ro = gpu_def->ro0_g * (P / gpu_def->P_atm) * (T_0 / T);
 		break;
 	default:
 		printf ("Wrong phase in function ro!\n");
@@ -178,11 +178,11 @@ __device__ double d_ro(double P, double T, char phase, char var)
 	case 'w':
 		if (var == 'P')
 		{
-			result_d_ro = def.ro0_w * (def.beta_w);
+			result_d_ro = gpu_def->ro0_w * (gpu_def->beta_w);
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = (-1) * def.ro0_w * alfa_w;
+			result_d_ro = (-1) * gpu_def->ro0_w * alfa_w;
 		}
 		else 
 		{
@@ -192,11 +192,11 @@ __device__ double d_ro(double P, double T, char phase, char var)
 	case 'n':
 		if (var == 'P')
 		{
-			result_d_ro = def.ro0_n * (def.beta_n);
+			result_d_ro = gpu_def->ro0_n * (gpu_def->beta_n);
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = (-1) * def.ro0_n * alfa_n;
+			result_d_ro = (-1) * gpu_def->ro0_n * alfa_n;
 		}
 		else 
 		{
@@ -206,11 +206,11 @@ __device__ double d_ro(double P, double T, char phase, char var)
 	case 'g':
 		if (var == 'P')
 		{
-			result_d_ro = (def.ro0_g / def.P_atm) * (T_0 / T);
+			result_d_ro = (gpu_def->ro0_g / gpu_def->P_atm) * (T_0 / T);
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = def.ro0_g * (P / def.P_atm) * (-1) * (T_0 / T) / T;
+			result_d_ro = gpu_def->ro0_g * (P / gpu_def->P_atm) * (-1) * (T_0 / T) / T;
 		}
 		else 
 		{
@@ -234,32 +234,32 @@ __device__ double d_ro(double P, double T, char phase, char var)
 // Расчет теплового потока в точке
 __device__ double assign_T_flow (ptr_Arrays DevArraysPtr, i, j, k)
 {
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if ((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
 	{
 		double T_flow = 0;
-		int local=i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
+		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
-		if ((def.locNx) > 2)
+		if ((gpu_def->locNx) > 2)
 		{
-			T_flow += (assign_lambda_eff(HostArraysPtr, local + 1, def) * HostArraysPtr.T[local + 1]
-			- 2 * assign_lambda_eff(HostArraysPtr, local, def) * HostArraysPtr.T[local]
-			+ assign_lambda_eff(HostArraysPtr, local - 1, def) * HostArraysPtr.T[local - 1]) / ((def.hx) * (def.hx));
+			T_flow += (assign_lambda_eff(DevArraysPtr, local + 1) * DevArraysPtr.T[local + 1]
+			- 2 * assign_lambda_eff(DevArraysPtr, local) * DevArraysPtr.T[local]
+			+ assign_lambda_eff(DevArraysPtr, local - 1) * DevArraysPtr.T[local - 1]) / ((gpu_def->hx) * (gpu_def->hx));
 		}
-		if ((def.locNy) > 2)
+		if ((gpu_def->locNy) > 2)
 		{
-			T_flow += (assign_lambda_eff(HostArraysPtr, local + def.locNx, def) * HostArraysPtr.T[local + def.locNx]
-			- 2 * assign_lambda_eff(HostArraysPtr, local, def) * HostArraysPtr.T[local]
-			+ assign_lambda_eff(HostArraysPtr, local - def.locNx, def) * HostArraysPtr.T[local - def.locNx]) / ((def.hy) * (def.hy));
-		}
-
-		if ((def.locNz) > 2)
-		{
-			T_flow = (assign_lambda_eff(HostArraysPtr, local + (def.locNx) * (def.locNy), def) * HostArraysPtr.T[local + (def.locNx) * (def.locNy)]
-			- 2 * assign_lambda_eff(HostArraysPtr, local, def) * HostArraysPtr.T[local]
-			+ assign_lambda_eff(HostArraysPtr, local - (def.locNx) * (def.locNy), def) * HostArraysPtr.T[local - (def.locNx) * (def.locNy)]) / ((def.hz) * (def.hz));
+			T_flow += (assign_lambda_eff(DevArraysPtr, local + gpu_def->locNx) * DevArraysPtr.T[local + gpu_def->locNx]
+			- 2 * assign_lambda_eff(DevArraysPtr, local) * DevArraysPtr.T[local]
+			+ assign_lambda_eff(DevArraysPtr, local - gpu_def->locNx) * DevArraysPtr.T[local - gpu_def->locNx]) / ((gpu_def->hy) * (gpu_def->hy));
 		}
 
-		test_u(T_flow, __FILE__, __LINE__);
+		if ((gpu_def->locNz) > 2)
+		{
+			T_flow = (assign_lambda_eff(DevArraysPtr, local + (gpu_def->locNx) * (gpu_def->locNy)) * DevArraysPtr.T[local + (gpu_def->locNx) * (gpu_def->locNy)]
+			- 2 * assign_lambda_eff(DevArraysPtr, local) * DevArraysPtr.T[local]
+			+ assign_lambda_eff(DevArraysPtr, local - (gpu_def->locNx) * (gpu_def->locNy)) * DevArraysPtr.T[local - (gpu_def->locNx) * (gpu_def->locNy)]) / ((gpu_def->hz) * (gpu_def->hz));
+		}
+
+		device_test_u(T_flow, __FILE__, __LINE__);
 		return T_flow;
 	}
 	else
@@ -270,44 +270,44 @@ __device__ double assign_T_flow (ptr_Arrays DevArraysPtr, i, j, k)
 __device__ double assign_E_flow (ptr_Arrays DevArraysPtr, i, j, k)
 {
 	
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if ((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
 	{
 		double E_flow = 0;
-		int local=i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
+		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
-		if ((def.locNx) > 2)
+		if ((gpu_def->locNx) > 2)
 		{
-			E_flow += (HostArraysPtr.ro_w[local + 1] * HostArraysPtr.H_w[local + 1] * HostArraysPtr.ux_w[local + 1]
-				- HostArraysPtr.ro_w[local - 1] * HostArraysPtr.H_w[local - 1] * HostArraysPtr.ux_w[local - 1]
-				+ HostArraysPtr.ro_n[local + 1] * HostArraysPtr.H_n[local + 1] * HostArraysPtr.ux_n[local + 1]
-				- HostArraysPtr.ro_n[local - 1] * HostArraysPtr.H_n[local - 1] * HostArraysPtr.ux_n[local - 1]
-				+ HostArraysPtr.ro_g[local + 1] * HostArraysPtr.H_g[local + 1] * HostArraysPtr.ux_g[local + 1]
-				- HostArraysPtr.ro_g[local - 1] * HostArraysPtr.H_g[local - 1] * HostArraysPtr.ux_g[local - 1]
-				) / (2. * (def.hx));
+			E_flow += (DevArraysPtr.ro_w[local + 1] * DevArraysPtr.H_w[local + 1] * DevArraysPtr.ux_w[local + 1]
+				- DevArraysPtr.ro_w[local - 1] * DevArraysPtr.H_w[local - 1] * DevArraysPtr.ux_w[local - 1]
+				+ DevArraysPtr.ro_n[local + 1] * DevArraysPtr.H_n[local + 1] * DevArraysPtr.ux_n[local + 1]
+				- DevArraysPtr.ro_n[local - 1] * DevArraysPtr.H_n[local - 1] * DevArraysPtr.ux_n[local - 1]
+				+ DevArraysPtr.ro_g[local + 1] * DevArraysPtr.H_g[local + 1] * DevArraysPtr.ux_g[local + 1]
+				- DevArraysPtr.ro_g[local - 1] * DevArraysPtr.H_g[local - 1] * DevArraysPtr.ux_g[local - 1]
+				) / (2. * (gpu_def->hx));
 		}
-		if ((def.locNy) > 2)
+		if ((gpu_def->locNy) > 2)
 		{
-			E_flow += (HostArraysPtr.ro_w[local + def.locNx] * HostArraysPtr.H_w[local + def.locNx] * HostArraysPtr.uy_w[local + def.locNx]
-			- HostArraysPtr.ro_w[local - def.locNx] * HostArraysPtr.H_w[local - def.locNx] * HostArraysPtr.uy_w[local - def.locNx]
-			+ HostArraysPtr.ro_n[local + def.locNx] * HostArraysPtr.H_n[local + def.locNx] * HostArraysPtr.uy_n[local + def.locNx]
-			- HostArraysPtr.ro_n[local - def.locNx] * HostArraysPtr.H_n[local - def.locNx] * HostArraysPtr.uy_n[local - def.locNx]
-			+ HostArraysPtr.ro_g[local + def.locNx] * HostArraysPtr.H_g[local + def.locNx] * HostArraysPtr.uy_g[local + def.locNx]
-			- HostArraysPtr.ro_g[local - def.locNx] * HostArraysPtr.H_g[local - def.locNx] * HostArraysPtr.uy_g[local - def.locNx]
-			)/ (2. * (def.hy));	
-		}
-
-		if ((def.locNz) > 2)
-		{
-			E_flow += (HostArraysPtr.ro_w[local + (def.locNx) * (def.locNy)] * HostArraysPtr.H_w[local + (def.locNx) * (def.locNy)] * HostArraysPtr.uy_w[local + (def.locNx) * (def.locNy)]
-			- HostArraysPtr.ro_w[local - (def.locNx) * (def.locNy)] * HostArraysPtr.H_w[local - (def.locNx) * (def.locNy)] * HostArraysPtr.uy_w[local - (def.locNx) * (def.locNy)]
-			+ HostArraysPtr.ro_n[local + (def.locNx) * (def.locNy)] * HostArraysPtr.H_n[local + (def.locNx) * (def.locNy)] * HostArraysPtr.uy_n[local + (def.locNx) * (def.locNy)]
-			- HostArraysPtr.ro_n[local - (def.locNx) * (def.locNy)] * HostArraysPtr.H_n[local - (def.locNx) * (def.locNy)] * HostArraysPtr.uy_n[local - (def.locNx) * (def.locNy)]
-			+ HostArraysPtr.ro_g[local + (def.locNx) * (def.locNy)] * HostArraysPtr.H_g[local + (def.locNx) * (def.locNy)] * HostArraysPtr.uy_g[local + (def.locNx) * (def.locNy)]
-			- HostArraysPtr.ro_g[local - (def.locNx) * (def.locNy)] * HostArraysPtr.H_g[local - (def.locNx) * (def.locNy)] * HostArraysPtr.uy_g[local - (def.locNx) * (def.locNy)]
-			)/ (2. * (def.hz));	
+			E_flow += (DevArraysPtr.ro_w[local + gpu_def->locNx] * DevArraysPtr.H_w[local + gpu_def->locNx] * DevArraysPtr.uy_w[local + gpu_def->locNx]
+			- DevArraysPtr.ro_w[local - gpu_def->locNx] * DevArraysPtr.H_w[local - gpu_def->locNx] * DevArraysPtr.uy_w[local - gpu_def->locNx]
+			+ DevArraysPtr.ro_n[local + gpu_def->locNx] * DevArraysPtr.H_n[local + gpu_def->locNx] * DevArraysPtr.uy_n[local + gpu_def->locNx]
+			- DevArraysPtr.ro_n[local - gpu_def->locNx] * DevArraysPtr.H_n[local - gpu_def->locNx] * DevArraysPtr.uy_n[local - gpu_def->locNx]
+			+ DevArraysPtr.ro_g[local + gpu_def->locNx] * DevArraysPtr.H_g[local + gpu_def->locNx] * DevArraysPtr.uy_g[local + gpu_def->locNx]
+			- DevArraysPtr.ro_g[local - gpu_def->locNx] * DevArraysPtr.H_g[local - gpu_def->locNx] * DevArraysPtr.uy_g[local - gpu_def->locNx]
+			)/ (2. * (gpu_def->hy));	
 		}
 
-		test_u(E_flow, __FILE__, __LINE__);
+		if ((gpu_def->locNz) > 2)
+		{
+			E_flow += (DevArraysPtr.ro_w[local + (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.H_w[local + (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.uy_w[local + (gpu_def->locNx) * (gpu_def->locNy)]
+			- DevArraysPtr.ro_w[local - (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.H_w[local - (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.uy_w[local - (gpu_def->locNx) * (gpu_def->locNy)]
+			+ DevArraysPtr.ro_n[local + (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.H_n[local + (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.uy_n[local + (gpu_def->locNx) * (gpu_def->locNy)]
+			- DevArraysPtr.ro_n[local - (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.H_n[local - (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.uy_n[local - (gpu_def->locNx) * (gpu_def->locNy)]
+			+ DevArraysPtr.ro_g[local + (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.H_g[local + (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.uy_g[local + (gpu_def->locNx) * (gpu_def->locNy)]
+			- DevArraysPtr.ro_g[local - (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.H_g[local - (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr.uy_g[local - (gpu_def->locNx) * (gpu_def->locNy)]
+			)/ (2. * (gpu_def->hz));	
+		}
+
+		device_test_u(E_flow, __FILE__, __LINE__);
 		return E_flow;
 	}
 	else
@@ -317,12 +317,12 @@ __device__ double assign_E_flow (ptr_Arrays DevArraysPtr, i, j, k)
 // Расчет внутренней энергии всей системы в точке
 __device__ void assign_E_current (ptr_Arrays DevArraysPtr, int local)
 {
-	HostArraysPtr.E[local] = (HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (HostArraysPtr.ro_w[local] * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local])
-		+ HostArraysPtr.S_n[local] * (HostArraysPtr.ro_n[local] * HostArraysPtr.H_n[local] - HostArraysPtr.P_n[local])
-		+ HostArraysPtr.S_g[local] * (HostArraysPtr.ro_g[local] * HostArraysPtr.H_g[local] - HostArraysPtr.P_g[local])) 
-		+ (1. - HostArraysPtr.m[local]) * (ro_r * HostArraysPtr.H_r[local] - HostArraysPtr.P_w[local]));
+	DevArraysPtr.E[local] = (DevArraysPtr.m[local] * (DevArraysPtr.S_w[local] * (DevArraysPtr.ro_w[local] * DevArraysPtr.H_w[local] - DevArraysPtr.P_w[local])
+		+ DevArraysPtr.S_n[local] * (DevArraysPtr.ro_n[local] * DevArraysPtr.H_n[local] - DevArraysPtr.P_n[local])
+		+ DevArraysPtr.S_g[local] * (DevArraysPtr.ro_g[local] * DevArraysPtr.H_g[local] - DevArraysPtr.P_g[local])) 
+		+ (1. - DevArraysPtr.m[local]) * (ro_r * DevArraysPtr.H_r[local] - DevArraysPtr.P_w[local]));
 
-	test_nan(HostArraysPtr.E[local], __FILE__, __LINE__);
+	device_test_nan(DevArraysPtr.E[local], __FILE__, __LINE__);
 }
 
 // Расчет внутренней энергии всей системы в точке на следующем шаге по времени
@@ -332,15 +332,15 @@ __global__ void assign_E_new (ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 	
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if ((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
 	{
 		double Q_hw = 0, Q_hr = 0; // источниковые члены
 
-		int local=i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
+		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
-		HostArraysPtr.E_new[local] = HostArraysPtr.E[local] + (def.dt) * (assign_T_flow(HostArraysPtr, i, j, k, def) + Q_hw + Q_hr - assign_E_flow(HostArraysPtr, i, j, k, def));
+		DevArraysPtr.E_new[local] = DevArraysPtr.E[local] + (gpu_def->dt) * (assign_T_flow(DevArraysPtr, i, j, k) + Q_hw + Q_hr - assign_E_flow(DevArraysPtr, i, j, k));
 
-		test_nan(HostArraysPtr.E_new[local], __FILE__, __LINE__);
+		device_test_nan(DevArraysPtr.E_new[local], __FILE__, __LINE__);
 	}
 }
 
@@ -351,26 +351,26 @@ __global__ void Border_T(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 	
-	if ((((i == 0) || (i == (def.locNx) - 1)) && ((def.locNx) >= 2)) || (j == 0) || (j == (def.locNy) - 1) || (((k == 0) || (k == (def.locNz) - 1)) && ((def.locNz) >= 2)))
+	if ((((i == 0) || (i == (gpu_def->locNx) - 1)) && ((gpu_def->locNx) >= 2)) || (j == 0) || (j == (gpu_def->locNy) - 1) || (((k == 0) || (k == (gpu_def->locNz) - 1)) && ((gpu_def->locNz) >= 2)))
 	{
-		int local1 = set_boundary_basic_coordinate(i, j, k, def);
-		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
+		int local1 = set_boundary_basic_coordinate(i, j, k);
+		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
 		if (j == 0)
 		{
-			HostArraysPtr.T[local] = 400;
+			DevArraysPtr.T[local] = 400;
 		}
-		else if(j == (def.locNy) - 1)
+		else if(j == (gpu_def->locNy) - 1)
 		{
-			HostArraysPtr.T[local] = 273;
+			DevArraysPtr.T[local] = 273;
 		}
 		else
 		{
 			// Будем считать границы области не теплопроводящими
-			HostArraysPtr.T[local] = HostArraysPtr.T[local1];
+			DevArraysPtr.T[local] = DevArraysPtr.T[local1];
 		}
 
-		test_positive(HostArraysPtr.T[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr.T[local], __FILE__, __LINE__);
 	}
 }
 
@@ -382,30 +382,30 @@ __global__ void Newton(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 	
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if ((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
 	{
 		int n = 5; // Размерность системы
 		double *F; // Вектор значений функций (из системы уравнений)
 		double *correction; // Вектор поправок к функциям
 		double *dF; // Матрица Якоби (в виде одномерного массива)
 
-		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
+		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 		
 		F = new double [n];
 		correction = new double [n];
 		dF = new double [n * n];
 
-		for (int w = 1; w <= def.newton_iterations; w++)
+		for (int w = 1; w <= gpu_def->newton_iterations; w++)
 		{
-			F[0] = HostArraysPtr.S_g[local] + HostArraysPtr.S_w[local] + HostArraysPtr.S_n[local] - 1.;
-			F[1] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def) * HostArraysPtr.S_w[local] - HostArraysPtr.roS_w[local];
-			F[2] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def) * HostArraysPtr.S_n[local] - HostArraysPtr.roS_n[local];
-			F[3] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def) * HostArraysPtr.S_g[local] - HostArraysPtr.roS_g[local];
-			F[4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def) * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local])
-				+ HostArraysPtr.S_n[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def) * HostArraysPtr.H_n[local] - HostArraysPtr.P_w[local])
-				+ HostArraysPtr.S_g[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def) * HostArraysPtr.H_g[local] - HostArraysPtr.P_w[local])) 
-				+ (1. - HostArraysPtr.m[local]) * (ro_r * HostArraysPtr.H_r[local] - HostArraysPtr.P_w[local]) 
-				- HostArraysPtr.E_new[local];
+			F[0] = DevArraysPtr.S_g[local] + DevArraysPtr.S_w[local] + DevArraysPtr.S_n[local] - 1.;
+			F[1] = ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w') * DevArraysPtr.S_w[local] - DevArraysPtr.roS_w[local];
+			F[2] = ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n') * DevArraysPtr.S_n[local] - DevArraysPtr.roS_n[local];
+			F[3] = ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g') * DevArraysPtr.S_g[local] - DevArraysPtr.roS_g[local];
+			F[4] = DevArraysPtr.m[local] * (DevArraysPtr.S_w[local] * (ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w') * DevArraysPtr.H_w[local] - DevArraysPtr.P_w[local])
+				+ DevArraysPtr.S_n[local] * (ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n') * DevArraysPtr.H_n[local] - DevArraysPtr.P_w[local])
+				+ DevArraysPtr.S_g[local] * (ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g') * DevArraysPtr.H_g[local] - DevArraysPtr.P_w[local])) 
+				+ (1. - DevArraysPtr.m[local]) * (ro_r * DevArraysPtr.H_r[local] - DevArraysPtr.P_w[local]) 
+				- DevArraysPtr.E_new[local];
 
 			// Матрица частных производных. Строки: dF/dSw, dF/dSn, dF/dSg, dF/dP, dF/dT
 
@@ -415,62 +415,62 @@ __global__ void Newton(ptr_Arrays DevArraysPtr)
 			dF[3] = 0.;
 			dF[4] = 0.;
 
-			dF[0 + n] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def);
+			dF[0 + n] = ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w');
 			dF[1 + n] = 0.;
 			dF[2 + n] = 0.;
-			dF[3 + n] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'P', def) * HostArraysPtr.S_w[local];
-			dF[4 + n] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'T', def) * HostArraysPtr.S_w[local];
+			dF[3 + n] = d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w', 'P') * DevArraysPtr.S_w[local];
+			dF[4 + n] = d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w', 'T') * DevArraysPtr.S_w[local];
 
 			dF[0 + n * 2] = 0.;
-			dF[1 + n * 2] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def);
+			dF[1 + n * 2] = ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n');
 			dF[2 + n * 2] = 0.;
-			dF[3 + n * 2] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'P', def) * HostArraysPtr.S_n[local];
-			dF[4 + n * 2] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'T', def) * HostArraysPtr.S_n[local];
+			dF[3 + n * 2] = d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n', 'P') * DevArraysPtr.S_n[local];
+			dF[4 + n * 2] = d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n', 'T') * DevArraysPtr.S_n[local];
 
 			dF[0 + n * 3] = 0.;
 			dF[1 + n * 3] = 0.;
-			dF[2 + n * 3] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def);
-			dF[3 + n * 3] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'P', def) * HostArraysPtr.S_g[local];
-			dF[4 + n * 3] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T', def) * HostArraysPtr.S_g[local];
+			dF[2 + n * 3] = ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g');
+			dF[3 + n * 3] = d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g', 'P') * DevArraysPtr.S_g[local];
+			dF[4 + n * 3] = d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g', 'T') * DevArraysPtr.S_g[local];
 
-			dF[0 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def) * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local]);
-			dF[1 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def) * HostArraysPtr.H_n[local] - HostArraysPtr.P_w[local]);
-			dF[2 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def) * HostArraysPtr.H_g[local] - HostArraysPtr.P_w[local]);
-			dF[3 + n * 4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'P', def) * HostArraysPtr.H_w[local] - 1.) 
-				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'P', def) * HostArraysPtr.H_n[local] - 1.)  
-				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'P', def) * HostArraysPtr.H_g[local] - 1.))
-				+ (1. - HostArraysPtr.m[local]) * (-1);
-			dF[4 + n * 4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'T', def) * HostArraysPtr.H_w[local] 
-				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def) * c_w(HostArraysPtr.T[local], def)) 
-				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'T', def) * HostArraysPtr.H_n[local]
-				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def) * c_n(HostArraysPtr.T[local], def))
-				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T', def) * HostArraysPtr.H_g[local]
-				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def) * c_g(HostArraysPtr.T[local], def)))
-				+ (1. - HostArraysPtr.m[local]) * ro_r * c_r(HostArraysPtr.T[local], def);
+			dF[0 + n * 4] = DevArraysPtr.m[local] * (ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w') * DevArraysPtr.H_w[local] - DevArraysPtr.P_w[local]);
+			dF[1 + n * 4] = DevArraysPtr.m[local] * (ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n') * DevArraysPtr.H_n[local] - DevArraysPtr.P_w[local]);
+			dF[2 + n * 4] = DevArraysPtr.m[local] * (ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g') * DevArraysPtr.H_g[local] - DevArraysPtr.P_w[local]);
+			dF[3 + n * 4] = DevArraysPtr.m[local] * (DevArraysPtr.S_w[local] * (d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w', 'P') * DevArraysPtr.H_w[local] - 1.) 
+				+ DevArraysPtr.S_n[local] * (d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n', 'P') * DevArraysPtr.H_n[local] - 1.)  
+				+ DevArraysPtr.S_g[local] * (d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g', 'P') * DevArraysPtr.H_g[local] - 1.))
+				+ (1. - DevArraysPtr.m[local]) * (-1);
+			dF[4 + n * 4] = DevArraysPtr.m[local] * (DevArraysPtr.S_w[local] * (d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w', 'T') * DevArraysPtr.H_w[local] 
+				+ ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'w') * c_w(DevArraysPtr.T[local])) 
+				+ DevArraysPtr.S_n[local] * (d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n', 'T') * DevArraysPtr.H_n[local]
+				+ ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'n') * c_n(DevArraysPtr.T[local]))
+				+ DevArraysPtr.S_g[local] * (d_ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g', 'T') * DevArraysPtr.H_g[local]
+				+ ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g') * c_g(DevArraysPtr.T[local])))
+				+ (1. - DevArraysPtr.m[local]) * ro_r * c_r(DevArraysPtr.T[local]);
 
 			reverse_matrix(dF, n);
 			mult_matrix_vector(correction, dF, F, n);
 
-			HostArraysPtr.S_w[local] = HostArraysPtr.S_w[local] - correction[0];
-			HostArraysPtr.S_n[local] = HostArraysPtr.S_n[local] - correction[1];
-			HostArraysPtr.S_g[local] = HostArraysPtr.S_g[local] - correction[2];
-			HostArraysPtr.P_w[local] = HostArraysPtr.P_w[local] - correction[3];
-			HostArraysPtr.T[local] = HostArraysPtr.T[local] - correction[4];
-			assign_H(HostArraysPtr, local, def);
+			DevArraysPtr.S_w[local] = DevArraysPtr.S_w[local] - correction[0];
+			DevArraysPtr.S_n[local] = DevArraysPtr.S_n[local] - correction[1];
+			DevArraysPtr.S_g[local] = DevArraysPtr.S_g[local] - correction[2];
+			DevArraysPtr.P_w[local] = DevArraysPtr.P_w[local] - correction[3];
+			DevArraysPtr.T[local] = DevArraysPtr.T[local] - correction[4];
+			assign_H(DevArraysPtr, local);
 		}
 
 		// Обновление значения суммарной энергии, т.к. оно больше не понадобится
 		// !!! Лучше вынести в отдельную функцию (просто обменять указатели).
-		HostArraysPtr.E[local] = HostArraysPtr.E_new[local];
+		DevArraysPtr.E[local] = DevArraysPtr.E_new[local];
 
 		delete[] F;
 		delete[] correction;
 		delete[] dF;
 
-		test_S(HostArraysPtr.S_w[local], __FILE__, __LINE__);
-		test_S(HostArraysPtr.S_n[local], __FILE__, __LINE__);
-		test_positive(HostArraysPtr.P_w[local], __FILE__, __LINE__);
-		test_positive(HostArraysPtr.T[local], __FILE__, __LINE__);
-		test_nan(HostArraysPtr.E[local], __FILE__, __LINE__);
+		device_test_S(DevArraysPtr.S_w[local], __FILE__, __LINE__);
+		device_test_S(DevArraysPtr.S_n[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr.P_w[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr.T[local], __FILE__, __LINE__);
+		device_test_nan(DevArraysPtr.E[local], __FILE__, __LINE__);
 	}
 }
