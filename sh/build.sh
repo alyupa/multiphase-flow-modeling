@@ -18,7 +18,7 @@ exe_name="$1_$2"
 # Energy mode
 if [ "$3" = "energy" ]; then
 	debug="-D ENERGY"
-	exe_name="$exe_name_energy"
+	exe_name="${exe_name}_energy"
 	energy="../energy.cpp"
 	echo "Energy is enabled"
 else
@@ -29,7 +29,7 @@ fi
 # Debug mode
 if [ "$3" = "debug" -o "$4" = "debug" ]; then
 	debug="-D MY_TEST"
-	exe_name="$exe_name_debug"
+	exe_name="${exe_name}_debug"
 fi
 
 hostname=`hostname`
