@@ -3,7 +3,7 @@
 
 __constant__ consts gpu_def [1];
 
-#include "Three-phase/three-phase.cu"
+#include "three-phase.cu"
 
 __global__ void assign_ro_kernel(ptr_Arrays DevArraysPtr)
 {
