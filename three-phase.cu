@@ -1,4 +1,4 @@
-#include "../gpu.h"
+#include "gpu.h"
 #include "three-phase.h"
 
 // Номер среды

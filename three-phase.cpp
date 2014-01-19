@@ -1,4 +1,4 @@
-#include "../defines.h"
+#include "defines.h"
 #include "three-phase.h"
 
 // Номер среды

@@ -930,7 +930,7 @@ void read_defines(int argc, char *argv[], consts* def)
 	{
 		strcpy(file, argv[1]);
 	} else {
-		strcpy(file, "..//defines.ini");
+		strcpy(file, "defines.ini");
 	}
 
 	if (!(defs = fopen(file, "rt")))

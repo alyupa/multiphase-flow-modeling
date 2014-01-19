@@ -46,7 +46,6 @@ else
 fi
 
 exe_name=$4
-project_folder="Three-phase"
 
 if [ -z "$5" ]; then
 	ini_file="../defines.ini"
@@ -54,8 +53,8 @@ else
 	ini_file=$5
 fi
 
-cd ../$project_folder/Debug
-echo "mpirun $PPN -np $2 $maxtime ../$project_folder/Debug/$exe_name" $ini_file
+cd ../Debug
+echo "mpirun $PPN -np $2 $maxtime ../Debug/$exe_name" $ini_file
 mpirun $PPN -np $2 $maxtime ./$exe_name $ini_file
 
 exit
