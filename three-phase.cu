@@ -22,28 +22,36 @@ __device__ double device_assign_S_n_e(ptr_Arrays DevArraysPtr, int local)
 // Функции кап. давлений и их производных для центральной части интервала
 __device__ double device_P_k_nw(double S)
 {
-	double A = gpu_def->lambda[media];
+	return 0;
+/*	double A = gpu_def->lambda[media];
 	return gpu_def->P_d_nw[media] * pow((pow(S, A / (1. - A)) - 1.), 1. / A);
+*/
 }
 
 __device__ double device_P_k_gn(double S)
 {
-	double A = gpu_def->lambda[media];
+	return 0;
+/*	double A = gpu_def->lambda[media];
 	return gpu_def->P_d_gn[media] * pow(pow((1. - S), A / (1. - A)) - 1., 1. / A);
+*/
 }
 
 __device__ double device_P_k_nw_S(double S)
 {
-	double A = gpu_def->lambda[media];
+	return 0;
+/*	double A = gpu_def->lambda[media];
 	return gpu_def->P_d_nw[media] * pow(pow(S, A / (1. - A)) - 1., 1. / A - 1.) * pow(S, (A / (1. - A) - 1.)) / (1. - A)
 		/ (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
+*/
 }
 
 __device__ double device_P_k_gn_S(double S)
 {
-	double A = gpu_def->lambda[media];
+	return 0;
+/*	double A = gpu_def->lambda[media];
 	return gpu_def->P_d_gn[media] * pow(pow(1. - S, A / (1. - A)) - 1., 1. / A - 1.) * pow(1. - S, A / (1. - A) - 1.) / (1. - A)
 		/ (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
+*/
 }
 
 // Функции вычисления капиллярных давлений и производных на всем интервале
@@ -51,7 +59,8 @@ __device__ double device_P_k_gn_S(double S)
 // Описание можно посмотреть в файле mathcad.
 __device__ double device_assign_P_k_nw(double S_w_e)
 {
-	double Pk_nw = 0;
+	return 0;
+/*	double Pk_nw = 0;
 
 	if (S_w_e <= S_w_range[0])
 	{
@@ -67,11 +76,13 @@ __device__ double device_assign_P_k_nw(double S_w_e)
 	}
 
 	return Pk_nw;
+*/
 }
 
 __device__ double device_assign_P_k_gn(double S_g_e)
 {
-	double Pk_gn = 0;
+	return 0;
+/*	double Pk_gn = 0;
 
 	if (S_g_e <= S_g_range[0])
 	{
@@ -85,14 +96,16 @@ __device__ double device_assign_P_k_gn(double S_g_e)
 	{
 		Pk_gn = device_P_k_gn(S_g_e);
 	}
-
+	
 	return Pk_gn;
+*/
 }
 
 // Функции вычисления производных капиллярных давлений по насыщенностям
 __device__ double device_assign_P_k_nw_S(double S_w_e)
 {
-	double PkSw = 0;
+	return 0;
+/*	double PkSw = 0;
 
 	if (S_w_e <= S_w_range[0])
 	{
@@ -108,11 +121,13 @@ __device__ double device_assign_P_k_nw_S(double S_w_e)
 	}
 
 	return PkSw;
+*/
 }
 
 __device__ double device_assign_P_k_gn_S(double S_g_e)
 {
-	double PkSn = 0;
+	return 0;
+/*	double PkSn = 0;
 
 	if (S_g_e <= S_g_range[0])
 	{
@@ -128,6 +143,7 @@ __device__ double device_assign_P_k_gn_S(double S_g_e)
 	}
 
 	return PkSn;
+*/
 }
 
 // Функции вычисления относительных проницаемостей
@@ -202,9 +218,20 @@ __global__ void assign_P_Xi_kernel(ptr_Arrays DevArraysPtr)
 		k_g = device_assign_k_g(S_g_e);
 		k_n = device_assign_k_n(S_w_e, S_n_e);
 
+#ifdef ENERGY
+		// Вынести в константы!!!
+		double mu_w = 1. / (29.21 * DevArraysPtr.T[local] - 7506.64);
+		double mu_n = 7.256E-10 * exp(4141.9 / DevArraysPtr.T[local]);
+		double mu_g = 1.717E-5 * pow((DevArraysPtr.T[local] / 273.), 0.683);
+
+		DevArraysPtr.Xi_w[local] = (-1.) * (gpu_def->K[media]) * k_w / mu_w;
+		DevArraysPtr.Xi_n[local] = (-1.) * (gpu_def->K[media]) * k_n / mu_n;
+		DevArraysPtr.Xi_g[local] = (-1.) * (gpu_def->K[media]) * k_g / mu_g;
+#else
 		DevArraysPtr.Xi_w[local] = (-1.) * (gpu_def->K[media]) * k_w / gpu_def->mu_w;
 		DevArraysPtr.Xi_n[local] = (-1.) * (gpu_def->K[media]) * k_n / gpu_def->mu_n;
 		DevArraysPtr.Xi_g[local] = (-1.) * (gpu_def->K[media]) * k_g / gpu_def->mu_g;
+#endif
 
 		if ((i != 0) && (i != (gpu_def->locNx) - 1) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
 		{
@@ -226,7 +253,7 @@ __global__ void assign_P_Xi_kernel(ptr_Arrays DevArraysPtr)
 
 // Вспомогательная функции для метода Ньютона:
 // Нахождение обратной матрицы 3*3;
-__device__ void device_reverse_matrix(double* a)
+/* __device__ void device_reverse_matrix(double* a)
 {
 	int n = 3;
 	double b[9], det = 0;
@@ -254,6 +281,7 @@ __device__ void device_reverse_matrix(double* a)
 				device_test_nan(a[i + n * j], __FILE__, __LINE__);
 			}
 }
+*/
 
 //Функция решения системы 3*3 на основные параметры (Pn,Sw,Sg) методом Ньютона в точке (i,j,k) среды media
 //1. Вычисление эффективных насыщенностей
@@ -265,6 +293,7 @@ __device__ void device_reverse_matrix(double* a)
 //7. Вычисление матрицы частных производных
 //8. Вычисление детерминанта матрицы частных производных
 //9. Получение решения системы методом Крамера в явном виде
+#ifndef ENERGY
 __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -326,6 +355,7 @@ __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 		device_test_positive(DevArraysPtr.P_w[local], __FILE__, __LINE__);
 	}
 }
+#endif
 
 //Задание граничных условий отдельно для (Sw,Sg),Pn
 

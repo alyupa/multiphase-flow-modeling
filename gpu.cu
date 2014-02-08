@@ -650,6 +650,15 @@ void device_memory_allocation(ptr_Arrays* ArraysPtr, double** DevBuffer, const c
 	cudaMalloc((void**) & ((*ArraysPtr).Xi_g), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
 	cudaMalloc((void**) & ((*ArraysPtr).roS_g), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
 	cudaMalloc((void**) & ((*ArraysPtr).roS_g_old), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
+#ifdef ENERGY
+	cudaMalloc((void**) & ((*ArraysPtr).T), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
+	cudaMalloc((void**) & ((*ArraysPtr).H_w), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
+	cudaMalloc((void**) & ((*ArraysPtr).H_n), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
+	cudaMalloc((void**) & ((*ArraysPtr).H_g), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
+	cudaMalloc((void**) & ((*ArraysPtr).H_r), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
+	cudaMalloc((void**) & ((*ArraysPtr).E), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
+	cudaMalloc((void**) & ((*ArraysPtr).E_new), (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double));
+#endif
 
 	checkErrors("memory allocation", __FILE__, __LINE__);
 }
@@ -687,6 +696,15 @@ void device_memory_free(ptr_Arrays DevArraysPtr, double* DevBuffer)
 	cudaFree(DevArraysPtr.Xi_g);
 	cudaFree(DevArraysPtr.roS_g);
 	cudaFree(DevArraysPtr.roS_g_old);
+#ifdef ENERGY
+	cudaFree(DevArraysPtr.T);
+	cudaFree(DevArraysPtr.H_w);
+	cudaFree(DevArraysPtr.H_n);
+	cudaFree(DevArraysPtr.H_g);
+	cudaFree(DevArraysPtr.H_r);
+	cudaFree(DevArraysPtr.E);
+	cudaFree(DevArraysPtr.E_new);
+#endif
 
 	checkErrors("memory release", __FILE__, __LINE__);
 }

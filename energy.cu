@@ -391,7 +391,7 @@ __global__ void Border_T(ptr_Arrays DevArraysPtr)
 
 // Расчет методом Ньютона значений переменных на новом шаге по времени, когда учитываем изменение энергии (случай 4х переменных)
 // !!! Пока "выбросим" капиллярные давления
-__global__ void Newton_kernel(ptr_Arrays DevArraysPtr)
+__global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
