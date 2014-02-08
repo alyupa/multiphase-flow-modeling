@@ -1230,3 +1230,75 @@ void print_hosts_configuration(const consts &def) {
 		 (def).locNx * (def).locNy * (def).locNz, (def).locNx, (def).locNy, (def).locNz);
 }
 
+static void S_local_initialization(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+{
+	HostArraysPtr.S_w[local] = def.S_w_init;
+	HostArraysPtr.S_n[local] = def.S_n_init;
+	HostArraysPtr.S_g[local] = 1. - def.S_w_init - def.S_n_init;
+//	HostArraysPtr.S_w[local] = def.S_w_init + 0.1 * cos(0.1 * local) + 0.1 / (local + 1.) + 0.1 * exp(-0.01 * local);
+//	HostArraysPtr.S_n[local] = def.S_n_init + 0.1 * sin((double)local) - 0.1 / (local + 1.) - 0.1 * exp(-0.005 * local);;
+}
+
+void data_initialization(const ptr_Arrays &HostArraysPtr, long int* t, const consts &def)
+{
+	*t = 0;
+	for (int i = 0; i < def.locNx; i++)
+		for (int j = 0; j < def.locNy; j++)
+			for (int k = 0; k < def.locNz; k++)
+				if (is_active_point(i, j, k, def))
+				{
+					int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
+
+					HostArraysPtr.m[local]=def.porosity[0];
+					S_local_initialization(HostArraysPtr, local, def);
+
+
+					/*if ((j == 0) && ((def.source) > 0))
+					{
+						HostArraysPtr.S_w[local] = def.S_w_gr;
+						HostArraysPtr.S_n[local] = def.S_n_gr;
+					}
+					else
+					{
+						HostArraysPtr.S_w[local] = def.S_w_init;
+						HostArraysPtr.S_n[local] = def.S_n_init;
+					}*/
+
+					double ro_g_dy = ((def.ro0_g * (1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local])
+					+ def.ro0_w * HostArraysPtr.S_w[local]
+					+ def.ro0_n * HostArraysPtr.S_n[local]) * (HostArraysPtr.m[local]) + (1. - HostArraysPtr.m[local]) * 2000.) * (def.g_const) * (def.hy);
+
+					// Если отдельно задаем значения на границах через градиент
+					//if (j == 0)
+					{
+						HostArraysPtr.P_w[local] = def.P_atm;
+						HostArraysPtr.P_n[local] = def.P_atm;
+						HostArraysPtr.P_g[local] = def.P_atm;
+					}
+					/*else
+					{
+						HostArraysPtr.P_w[local] = HostArraysPtr.P_w[local - (def.locNx)] + ro_g_dy;
+						HostArraysPtr.P_n[local] = HostArraysPtr.P_n[local - (def.locNx)] + ro_g_dy;
+						HostArraysPtr.P_g[local] = HostArraysPtr.P_g[local - (def.locNx)] + ro_g_dy;
+					}*/
+
+					HostArraysPtr.ro_w[local] = def.ro0_w * (1. + (def.beta_w) * (HostArraysPtr.P_w[local] - def.P_atm));
+					HostArraysPtr.ro_n[local] = def.ro0_n * (1. + (def.beta_n) * (HostArraysPtr.P_n[local] - def.P_atm));
+					HostArraysPtr.ro_g[local] = def.ro0_g * HostArraysPtr.P_g[local] / def.P_atm;
+
+#ifdef ENERGY
+					// !!!! Нужно задать начальные распределения температуры, энтальпии, энергии!
+					HostArraysPtr.T[local] = 285;
+
+					test_positive(HostArraysPtr.T[local], __FILE__, __LINE__);
+#endif
+					test_S(HostArraysPtr.S_n[local], __FILE__, __LINE__);
+					test_S(HostArraysPtr.S_w[local], __FILE__, __LINE__);
+					test_positive(HostArraysPtr.P_w[local], __FILE__, __LINE__);
+					test_positive(HostArraysPtr.P_n[local], __FILE__, __LINE__);
+					test_positive(HostArraysPtr.P_g[local], __FILE__, __LINE__);
+					test_positive(HostArraysPtr.ro_w[local], __FILE__, __LINE__);
+					test_positive(HostArraysPtr.ro_n[local], __FILE__, __LINE__);
+					test_positive(HostArraysPtr.ro_g[local], __FILE__, __LINE__);
+				}
+}

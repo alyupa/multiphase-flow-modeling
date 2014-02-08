@@ -426,79 +426,9 @@ __global__ void Border_P_kernel(ptr_Arrays DevArraysPtr)
 	}
 }
 
-void data_initialization(const ptr_Arrays &HostArraysPtr, long int* t, const consts &def)
-{
-	*t = 0;
-	for (int i = 0; i < def.locNx; i++)
-		for (int j = 0; j < def.locNy; j++)
-			for (int k = 0; k < def.locNz; k++)
-				if (is_active_point(i, j, k, def))
-				{
-					// Преобразование локальных координат процессора к глобальным
-					int I = local_to_global(i, 'x', def);
-					int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
-
-					HostArraysPtr.m[local]=def.porosity[0];
-					// Линейное изменение насыщенностей в начальном распределении
-	/*				int j1 = def.locNy / 2;
-
-					if (j < j1)
-					{
-						HostArraysPtr.S_w[local] = def.S_w_gr + (def.S_w_init - def.S_w_gr) * j / j1;
-						HostArraysPtr.S_n[local] = def.S_n_gr + (def.S_n_init - def.S_n_gr) * j / j1;
-					}
-					else
-					*/
-					if ((j == 0) && ((def.source) > 0))
-					{
-						HostArraysPtr.S_w[local] = def.S_w_gr;
-						HostArraysPtr.S_n[local] = def.S_n_gr;
-					}
-					else
-					{
-						HostArraysPtr.S_w[local] = def.S_w_init;
-						HostArraysPtr.S_n[local] = def.S_n_init;
-					}
-
-					/*double ro_g_dy = (def.ro0_g * (1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local])
-					+ def.ro0_w * HostArraysPtr.S_w[local]
-					+ def.ro0_n * HostArraysPtr.S_n[local]) * (HostArraysPtr.m[local]) * (def.g_const) * (def.hy);*/
-
-					// Если отдельно задаем значения на границах через градиент
-					//if (j == 0)
-					{
-						HostArraysPtr.P_w[local] = def.P_atm;
-						HostArraysPtr.P_n[local] = def.P_atm;
-						HostArraysPtr.P_g[local] = def.P_atm;
-					}
-					/*else
-					{
-						HostArraysPtr.P_w[local] = HostArraysPtr.P_w[local - (def.locNx)] + ro_g_dy;
-						HostArraysPtr.P_n[local] = HostArraysPtr.P_n[local - (def.locNx)] + ro_g_dy;
-						HostArraysPtr.P_g[local] = HostArraysPtr.P_g[local - (def.locNx)] + ro_g_dy;
-					}*/
-
-					HostArraysPtr.ro_w[local] = def.ro0_w * (1. + (def.beta_w) * (HostArraysPtr.P_w[local] - def.P_atm));
-					HostArraysPtr.ro_n[local] = def.ro0_n * (1. + (def.beta_n) * (HostArraysPtr.P_n[local] - def.P_atm));
-					HostArraysPtr.ro_g[local] = def.ro0_g * HostArraysPtr.P_g[local] / def.P_atm;
-
-					test_S(HostArraysPtr.S_n[local], __FILE__, __LINE__);
-					test_S(HostArraysPtr.S_w[local], __FILE__, __LINE__);
-					test_positive(HostArraysPtr.P_w[local], __FILE__, __LINE__);
-					test_positive(HostArraysPtr.P_n[local], __FILE__, __LINE__);
-					test_positive(HostArraysPtr.P_g[local], __FILE__, __LINE__);
-					test_positive(HostArraysPtr.ro_w[local], __FILE__, __LINE__);
-					test_positive(HostArraysPtr.ro_n[local], __FILE__, __LINE__);
-					test_positive(HostArraysPtr.ro_g[local], __FILE__, __LINE__);
-				}
-}
-
 // Является ли точка нагнетательной скважиной
 __device__ int device_is_injection_well(int i, int j, int k)
 {
-if((j == 1) && ((i > (gpu_def->locNx) / 3) && (i < 2 * (gpu_def->locNx) / 3) && (((gpu_def->locNz) < 2) || (k > (gpu_def->locNz) / 3) && (k < 2 * (gpu_def->locNz) / 3))))
-		return 1;
-	else
 		return 0;
 }
 
@@ -511,24 +441,8 @@ __device__ int device_is_output_well(int i, int j, int k)
 // Устанавливает значения втекаемых/вытекаемых жидкостей q_i на скважинах
 __device__ void device_wells_q(ptr_Arrays DevArraysPtr, int i, int j, int k, double* q_w, double* q_n, double* q_g)
 {
-	//double q = 0.;
 	*q_w = 0.0;
 	*q_g = 0.0;
 	*q_n = 0.0;
-
-	if (device_is_injection_well(i, j, k))
-	{
-		*q_w = 0.01;
-		*q_g = 0.0;
-		*q_n = 0.0;
-	}
-	/*if (device_is_output_well(i, j, k))
-	{
-		q = 0.035;
-
-		*q_w = -q * DevArraysPtr.S_w[i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy)];
-		*q_g = -q * (1 - DevArraysPtr.S_w[i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy)] - DevArraysPtr.S_n[i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy)]);
-		*q_n = -q * DevArraysPtr.S_n[i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy)];
-	}*/
 }
 
