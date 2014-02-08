@@ -532,7 +532,7 @@ void print_plots_top(double t, const consts &def)
 	mkdir(def.plots_dir, 0000777);
 #endif
 
-	sprintf(fname, "%s/S=%012.4f.dat", def.plots_dir, t);
+	sprintf(fname, "%s/F-%012.0f.tec", def.plots_dir, t);
 
 	// Создание (или перезапись) файла с графиками
 	// 1. Для распределения насыщенностей NAPL S_n
@@ -587,7 +587,7 @@ void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, i
 	char fname[64];
 	FILE *fp;
 
-	sprintf(fname, "%s/S=%012.4f.dat", def.plots_dir, t);
+	sprintf(fname, "%s/F-%012.0f.tec", def.plots_dir, t);
 
 	// Открытие на дозапись и сохранение графиков
 	if (!(fp = fopen(fname, "at")))
