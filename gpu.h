@@ -3,6 +3,7 @@
 
 #include "defines.h"
 #include <cuda.h>
+#include <stdio.h>
 
 #define CUPRINTF(fmt, ...) printf("[%d, %d , %d]:\t" fmt, \
                                   blockIdx.x*gridDim.x+threadIdx.x,\

@@ -1,5 +1,4 @@
 #include "gpu.h"
-#include "cuPrintf.cu"
 
 // Проверка ошибок GPU
 void checkErrors(const char *label, const char *file, int line)
