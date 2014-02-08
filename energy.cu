@@ -1,4 +1,4 @@
-#include "../gpu.h"
+#include "gpu.h"
 
 // !!! Нужно потом будет вынести в структуру констант
 // Базовая температура
@@ -129,17 +129,17 @@ __device__ double assign_H_r (double T)
 	return (gpu_def->P_atm / ro_r) + (T - T_0) * (c0_r + C_r * (T - T_0) / 2);
 }
 
-__global__ void assign_H (ptr_Arrays DevArraysPtr, int local)
+__device__ void assign_H (ptr_Arrays DevArraysPtr, int local)
 {
-	DevArraysPtr.H_w[local] = assign_H_w (DevArraysPtr.T[local]);
-	DevArraysPtr.H_n[local] = assign_H_n (DevArraysPtr.T[local]);
-	DevArraysPtr.H_g[local] = assign_H_g (DevArraysPtr.T[local]);
-	DevArraysPtr.H_r[local] = assign_H_r (DevArraysPtr.T[local]);
-
-	device_test_nan(DevArraysPtr.H_w[local], __FILE__, __LINE__);
-	device_test_nan(DevArraysPtr.H_n[local], __FILE__, __LINE__);
-	device_test_nan(DevArraysPtr.H_g[local], __FILE__, __LINE__);
-	device_test_nan(DevArraysPtr.H_r[local], __FILE__, __LINE__);
+		DevArraysPtr.H_w[local] = assign_H_w (DevArraysPtr.T[local]);
+		DevArraysPtr.H_n[local] = assign_H_n (DevArraysPtr.T[local]);
+		DevArraysPtr.H_g[local] = assign_H_g (DevArraysPtr.T[local]);
+		DevArraysPtr.H_r[local] = assign_H_r (DevArraysPtr.T[local]);
+	
+		device_test_nan(DevArraysPtr.H_w[local], __FILE__, __LINE__);
+		device_test_nan(DevArraysPtr.H_n[local], __FILE__, __LINE__);
+		device_test_nan(DevArraysPtr.H_g[local], __FILE__, __LINE__);
+		device_test_nan(DevArraysPtr.H_r[local], __FILE__, __LINE__);
 }
 
 // Возвращает значение плотности в точке фазы phase как функции от P, T
@@ -232,7 +232,7 @@ __device__ double d_ro(double P, double T, char phase, char var)
 // Коэффициенты вязкости для water, napl, gas and rock
 
 // Расчет теплового потока в точке
-__device__ double assign_T_flow (ptr_Arrays DevArraysPtr, i, j, k)
+__device__ double assign_T_flow (ptr_Arrays DevArraysPtr, int i, int j, int k)
 {
 	if ((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
 	{
@@ -267,7 +267,7 @@ __device__ double assign_T_flow (ptr_Arrays DevArraysPtr, i, j, k)
 }
 
 // Расчет потока энергии в точке
-__device__ double assign_E_flow (ptr_Arrays DevArraysPtr, i, j, k)
+__device__ double assign_E_flow (ptr_Arrays DevArraysPtr, int i, int j, int k)
 {
 	
 	if ((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
@@ -326,7 +326,7 @@ __device__ void assign_E_current (ptr_Arrays DevArraysPtr, int local)
 }
 
 // Расчет внутренней энергии всей системы в точке на следующем шаге по времени
-__global__ void assign_E_new (ptr_Arrays DevArraysPtr)
+__global__ void assign_E_new_kernel (ptr_Arrays DevArraysPtr)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -344,6 +344,21 @@ __global__ void assign_E_new (ptr_Arrays DevArraysPtr)
 	}
 }
 
+__global__ void assign_H_E_current_kernel (ptr_Arrays DevArraysPtr)
+{
+	int i = threadIdx.x + blockIdx.x * blockDim.x;
+	int j = threadIdx.y + blockIdx.y * blockDim.y;
+	int k = threadIdx.z + blockIdx.z * blockDim.z;
+	
+	if ((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
+	{
+		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
+		
+		assign_H(DevArraysPtr, local);
+		assign_E_current(DevArraysPtr, local);
+	}
+}
+
 // Задание граничных условий на температуру
 __global__ void Border_T(ptr_Arrays DevArraysPtr)
 {
@@ -353,7 +368,7 @@ __global__ void Border_T(ptr_Arrays DevArraysPtr)
 	
 	if ((((i == 0) || (i == (gpu_def->locNx) - 1)) && ((gpu_def->locNx) >= 2)) || (j == 0) || (j == (gpu_def->locNy) - 1) || (((k == 0) || (k == (gpu_def->locNz) - 1)) && ((gpu_def->locNz) >= 2)))
 	{
-		int local1 = set_boundary_basic_coordinate(i, j, k);
+		int local1 = device_set_boundary_basic_coordinate(i, j, k);
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
 		if (j == 0)
@@ -376,7 +391,7 @@ __global__ void Border_T(ptr_Arrays DevArraysPtr)
 
 // Расчет методом Ньютона значений переменных на новом шаге по времени, когда учитываем изменение энергии (случай 4х переменных)
 // !!! Пока "выбросим" капиллярные давления
-__global__ void Newton(ptr_Arrays DevArraysPtr)
+__global__ void Newton_kernel(ptr_Arrays DevArraysPtr)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -448,8 +463,8 @@ __global__ void Newton(ptr_Arrays DevArraysPtr)
 				+ ro(DevArraysPtr.P_w[local], DevArraysPtr.T[local], 'g') * c_g(DevArraysPtr.T[local])))
 				+ (1. - DevArraysPtr.m[local]) * ro_r * c_r(DevArraysPtr.T[local]);
 
-			reverse_matrix(dF, n);
-			mult_matrix_vector(correction, dF, F, n);
+			device_reverse_matrix(dF, n);
+			device_mult_matrix_vector(correction, dF, F, n);
 
 			DevArraysPtr.S_w[local] = DevArraysPtr.S_w[local] - correction[0];
 			DevArraysPtr.S_n[local] = DevArraysPtr.S_n[local] - correction[1];

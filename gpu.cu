@@ -5,6 +5,11 @@ __constant__ consts gpu_def [1];
 
 #include "three-phase.cu"
 
+#ifdef ENERGY
+#include "gauss.cu"
+#include "energy.cu"
+#endif
+
 __global__ void assign_ro_kernel(ptr_Arrays DevArraysPtr)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -234,13 +239,24 @@ void ro_P_Xi_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevA
 	cudaPrintfDisplay(stdout, true);
 }
 
-// Расчет давления воды P1 и насыщенности NAPL S2 во всех точках сетки
 void P_S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
 {
 	Newton_method_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
 	checkErrors("assign Pw and Sn", __FILE__, __LINE__);
 	cudaPrintfDisplay(stdout, true);
 }
+
+#ifdef ENERGY
+void E_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+{
+	assign_E_new_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
+}
+
+void H_E_current_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+{
+	assign_H_E_current_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
+}
+#endif
 
 // Расчет скорости в каждой точке сетки
 __global__ void assign_u_kernel(ptr_Arrays DevArraysPtr)

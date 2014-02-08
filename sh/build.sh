@@ -49,14 +49,14 @@ else 	if [ "$hostname" = "k100" ]; then
 	fi
 fi
 
-project_file="three-phase.cpp"
+project_file="../three-phase.cpp"
 
 if [ "$1" = "gpu" ]; then
 	echo "nvcc $debug -c -arch sm_$ARCH gpu.o ../gpu.cu"
 		  nvcc $debug -c -arch sm_$ARCH gpu.o ../gpu.cu
 	arch_file="gpu.o"
 else if [ "$1" = "cpu" ]; then
-		arch_file="../cpu.cpp ../$project_file"
+		arch_file="../cpu.cpp ../gauss.cpp $energy $project_file"
 		lib_path=""
 		PPN=""
 	 else
@@ -81,8 +81,11 @@ else 	if [ "$hostname" = "mvse" ]; then
 		compilator="mpicc"
 	else	if [ "$2" = "mpi" ]; then
 			compilator="mpicxx"
-		else
-			compilator="g++-4.4"
+		else	if [ "$1" = "gpu" ]; then
+			compilator="nvcc"
+			else
+				compilator="g++"
+			fi
 		fi
 	fi
 fi
@@ -90,7 +93,7 @@ fi
 mkdir -p ../Debug
 exe_name="$exe_name.px"
 
-echo "$compilator $debug $lib_path ../main.cpp $comm_file $energy ../shared_test.cpp ../gauss.cpp $arch_file -o ../Debug/$exe_name"
-	  $compilator $debug $lib_path ../main.cpp $comm_file $energy ../shared_test.cpp ../gauss.cpp $arch_file -o ../Debug/$exe_name
+echo "$compilator $debug $lib_path ../main.cpp $comm_file ../shared_test.cpp $arch_file -o ../Debug/$exe_name"
+	$compilator $debug $lib_path ../main.cpp $comm_file ../shared_test.cpp $arch_file -o ../Debug/$exe_name
 
 exit
