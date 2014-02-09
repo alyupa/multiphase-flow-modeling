@@ -20,9 +20,20 @@ __global__ void assign_ro_kernel(ptr_Arrays DevArraysPtr)
 	{
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
-		DevArraysPtr.ro_w[local] = (gpu_def->ro0_w) * (1. + (gpu_def->beta_w) * (DevArraysPtr.P_w[local] - (gpu_def->P_atm)));
-		DevArraysPtr.ro_n[local] = (gpu_def->ro0_n) * (1. + (gpu_def->beta_n) * (DevArraysPtr.P_n[local] - (gpu_def->P_atm)));
-		DevArraysPtr.ro_g[local] = (gpu_def->ro0_g) * DevArraysPtr.P_g[local] / (gpu_def->P_atm);
+#ifdef ENERGY
+		// !!! Вынести коэффициенты теплового расширения в const consts &def и использовать T_0 оттуда же
+		double alfa_w = 1.32E-7; // 1/K !!! E-4
+		double alfa_n = 9.2E-7;
+		double T_0 = 273;
+
+		DevArraysPtr.ro_w[local] = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (DevArraysPtr.P_w[local] - gpu_def->P_atm) - alfa_w * (DevArraysPtr.T[local] - T_0));
+		DevArraysPtr.ro_n[local] = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (DevArraysPtr.P_n[local] - gpu_def->P_atm) - alfa_n * (DevArraysPtr.T[local] - T_0));
+		DevArraysPtr.ro_g[local] = gpu_def->ro0_g * (DevArraysPtr.P_g[local] / gpu_def->P_atm) * (T_0 / DevArraysPtr.T[local]);
+#else
+		DevArraysPtr.ro_w[local] = def.ro0_w * (1. + (def.beta_w) * (DevArraysPtr.P_w[local] - def.P_atm));
+		DevArraysPtr.ro_n[local] = def.ro0_n * (1. + (def.beta_n) * (DevArraysPtr.P_n[local] - def.P_atm));
+		DevArraysPtr.ro_g[local] = def.ro0_g * DevArraysPtr.P_g[local] / def.P_atm;
+#endif
 		device_test_positive(DevArraysPtr.ro_g[local], __FILE__, __LINE__);
 		device_test_positive(DevArraysPtr.ro_w[local], __FILE__, __LINE__);
 		device_test_positive(DevArraysPtr.ro_n[local], __FILE__, __LINE__);
@@ -248,11 +259,13 @@ void P_S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 void E_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
 {
 	assign_E_new_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
+	checkErrors("assign E new", __FILE__, __LINE__);
 }
 
 void H_E_current_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
 {
 	assign_H_E_current_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
+	checkErrors("assign H and E", __FILE__, __LINE__);
 }
 #endif
 
@@ -583,6 +596,11 @@ void boundary_conditions(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevA
 
 	Border_P_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
 	checkErrors("assign Pw", __FILE__, __LINE__);
+
+#ifdef ENERGY
+	Border_T_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
+	checkErrors("assign T", __FILE__, __LINE__);
+#endif
 }
 
 // Функция загрузки данных в память хоста

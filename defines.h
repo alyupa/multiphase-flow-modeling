@@ -10,7 +10,7 @@
 // #define ENERGY
 
 // Количество видеоускорителей на узле кластера
-// Для К-100 - 3, для МВС-Экспресс 1 или 2
+// Для К-100 - 3
 #define GPU_PER_NODE 3
 
 // Нитей в блоке ускорителя
@@ -42,9 +42,6 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
-// Вывод графиков BjnIO
-//#include "bjnio.h"
-
 /*!
 * Структура "параметры расчетной точки"
 */
@@ -66,19 +63,19 @@ typedef struct ptr_Arrays_tag ptr_Arrays;
 struct consts_tag
 {
 	double upscale_l, upscale_t;
-	double lambda[2];
-	double S_wr[2];
-	double porosity[2];
+	double lambda[1];
+	double S_wr[1];
+	double porosity[1];
 	double hx, hy, hz, dt, tau, l, c_w, c_n, beta_w, beta_n, P_atm, g_const, mu_w, mu_n, ro0_w, ro0_n, timeX;
 	double S_n_gr;
 	int Nx, Ny, Nz;
 	int source, save_plots, print_screen, newton_iterations;
-	double K[2];
+	double K[1];
 	double S_w_init, S_n_init;
-	double S_nr[2];
-	double S_gr[2];
-	double P_d_nw[2];
-	double P_d_gn[2];
+	double S_nr[1];
+	double S_gr[1];
+	double P_d_nw[1];
+	double P_d_gn[1];
 	double c_g, beta_g, mu_g, ro0_g, S_w_gr;
 	// Локальные размеры
 	int locNx, locNy, locNz;

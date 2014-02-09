@@ -318,6 +318,9 @@ void initialization(ptr_Arrays* HostArraysPtr, ptr_Arrays* DevArraysPtr, long in
 	load_data_to_device((*HostArraysPtr).roS_w_old, (*DevArraysPtr).roS_w_old, *def);
 	load_data_to_device((*HostArraysPtr).roS_n_old, (*DevArraysPtr).roS_n_old, *def);
 	load_data_to_device((*HostArraysPtr).m, (*DevArraysPtr).m, *def);
+#ifdef ENERGY
+	load_data_to_device((*HostArraysPtr).T, (*DevArraysPtr).T, *def);
+#endif
 }
 
 // Завершение работы (1), освобождение памяти (2)
@@ -473,6 +476,9 @@ void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 	load_data_to_host(HostArraysPtr.ux_n, DevArraysPtr.ux_n , def);
 	load_data_to_host(HostArraysPtr.uy_n, DevArraysPtr.uy_n , def);
 	load_data_to_host(HostArraysPtr.uz_n, DevArraysPtr.uz_n , def);
+#ifdef ENERGY
+	load_data_to_host(HostArraysPtr.T, DevArraysPtr.T, def);
+#endif
 
 	// Проверка на выход из допустимого диапазона значений P и S
 #ifdef MY_TEST
@@ -900,7 +906,6 @@ void resize_defines(consts* def, double l, double t)
 	def->beta_n *= (l*l)/m;
 	def->g_const *= l/(t*t);
 	def->K[0] *= l*l;
-	def->K[1] *= l*l;
 	def->mu_w *= m*t/(l*l);
 	def->mu_n *= m*t/(l*l);
 	def->ro0_n *= m/(pow(l,3));
@@ -1057,19 +1062,9 @@ void read_defines(int argc, char *argv[], consts* def)
 			def->lambda[0] = atof(attr_value);
 			continue;
 		}
-		if (!strcmp(attr_name, "LAMBDA_1"))
-		{
-			def->lambda[1] = atof(attr_value);
-			continue;
-		}
 		if (!strcmp(attr_name, "M_0"))
 		{
 			def->porosity[0] = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "M_1"))
-		{
-			def->porosity[1] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_WR_0"))
@@ -1077,22 +1072,11 @@ void read_defines(int argc, char *argv[], consts* def)
 			def->S_wr[0] = atof(attr_value);
 			continue;
 		}
-		if (!strcmp(attr_name, "S_WR_1"))
-		{
-			def->S_wr[1] = atof(attr_value);
-			continue;
-		}
 		if (!strcmp(attr_name, "K_0"))
 		{
 			def->K[0] = atof(attr_value);
 			continue;
 		}
-		if (!strcmp(attr_name, "K_1"))
-		{
-			def->K[1] = atof(attr_value);
-			continue;
-		}
-
 		if (!strcmp(attr_name, "C_G"))
 		{
 			def->c_g = atof(attr_value);
@@ -1118,19 +1102,9 @@ void read_defines(int argc, char *argv[], consts* def)
 			def->P_d_nw[0] = atof(attr_value);
 			continue;
 		}
-		if (!strcmp(attr_name, "P_D_NW_1"))
-		{
-			def->P_d_nw[1] = atof(attr_value);
-			continue;
-		}
 		if (!strcmp(attr_name, "P_D_GN_0"))
 		{
 			def->P_d_gn[0] = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "P_D_GN_1"))
-		{
-			def->P_d_gn[1] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_W_GR"))
@@ -1153,19 +1127,9 @@ void read_defines(int argc, char *argv[], consts* def)
 			def->S_nr[0] = atof(attr_value);
 			continue;
 		}
-		if (!strcmp(attr_name, "S_NR_1"))
-		{
-			def->S_nr[1] = atof(attr_value);
-			continue;
-		}
 		if (!strcmp(attr_name, "S_GR_0"))
 		{
 			def->S_gr[0] = atof(attr_value);
-			continue;
-		}
-		if (!strcmp(attr_name, "S_GR_1"))
-		{
-			def->S_gr[1] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_N_GR"))
