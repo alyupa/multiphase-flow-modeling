@@ -143,7 +143,6 @@ void barrier(void);
 void restore(const ptr_Arrays &HostArraysPtr, long int* time_counter, const consts &def);
 void save(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, long int time_counter, const consts &def);
 void read_defines(int argc, char *argv[], consts* def);
-void read_version(void);
 void print_error(const char *error, const char *file, int line);
 
 // Unit-тесты
@@ -159,10 +158,11 @@ void read_defines_test(const consts &def);
 
 
 // Расчеты в каждой точке
+void prepare_local_vars(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
 double ro_eff_gdy(const ptr_Arrays &HostArraysPtr, int local, const consts &def);
 void assign_P_Xi(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void assign_ro(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void assign_S(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
+void assign_ro(const ptr_Arrays &HostArraysPtr, int local, const consts &def);
+void assign_S(const ptr_Arrays &HostArraysPtr, int local, const consts &def);
 void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
 void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def);
 void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def);
@@ -173,15 +173,12 @@ int set_boundary_basic_coordinate(int i, int j, int k, const consts &def);
 int reverse_matrix (double *a, int n);
 void mult_matrix_vector (double* result_vect, double* matr, double* vect, int n);
 
-void ro_P_Xi_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-void P_ro_Xi_exchange(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def);
+void prepare_all_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
 void u_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-void u_exchange(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def);
-void S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-void roS_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def);
-void P_S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
+void find_values_from_partial_equations(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def);
+void solve_nonlinear_system(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
 void boundary_conditions(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-void P_S_exchange(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def);
+void exchange_basic_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def);
 
 void load_exchange_data_part_xl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
 void load_exchange_data_part_xr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
@@ -207,10 +204,7 @@ double assign_T_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, cons
 double assign_E_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
 void assign_E_current (const ptr_Arrays &HostArraysPtr, int local, const consts &def);
 void assign_E_new (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void H_E_current_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
 void Border_T(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void E_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-
 #endif
 
 #endif

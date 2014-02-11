@@ -10,34 +10,25 @@ __constant__ consts gpu_def [1];
 #include "energy.cu"
 #endif
 
-__global__ void assign_ro_kernel(ptr_Arrays DevArraysPtr)
+__device__ void device_assign_ro(ptr_Arrays DevArraysPtr, int local)
 {
-	int i = threadIdx.x + blockIdx.x * blockDim.x;
-	int j = threadIdx.y + blockIdx.y * blockDim.y;
-	int k = threadIdx.z + blockIdx.z * blockDim.z;
-
-	if (GPU_ACTIVE_POINT)
-	{
-		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
-
 #ifdef ENERGY
-		// !!! Вынести коэффициенты теплового расширения в const consts &def и использовать T_0 оттуда же
-		double alfa_w = 1.32E-7; // 1/K !!! E-4
-		double alfa_n = 9.2E-7;
-		double T_0 = 273;
+	// !!! Вынести коэффициенты теплового расширения в const consts &def и использовать T_0 оттуда же
+	double alfa_w = 1.32E-7; // 1/K !!! E-4
+	double alfa_n = 9.2E-7;
+	double T_0 = 273;
 
-		DevArraysPtr.ro_w[local] = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (DevArraysPtr.P_w[local] - gpu_def->P_atm) - alfa_w * (DevArraysPtr.T[local] - T_0));
-		DevArraysPtr.ro_n[local] = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (DevArraysPtr.P_n[local] - gpu_def->P_atm) - alfa_n * (DevArraysPtr.T[local] - T_0));
-		DevArraysPtr.ro_g[local] = gpu_def->ro0_g * (DevArraysPtr.P_g[local] / gpu_def->P_atm) * (T_0 / DevArraysPtr.T[local]);
+	DevArraysPtr.ro_w[local] = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (DevArraysPtr.P_w[local] - gpu_def->P_atm) - alfa_w * (DevArraysPtr.T[local] - T_0));
+	DevArraysPtr.ro_n[local] = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (DevArraysPtr.P_n[local] - gpu_def->P_atm) - alfa_n * (DevArraysPtr.T[local] - T_0));
+	DevArraysPtr.ro_g[local] = gpu_def->ro0_g * (DevArraysPtr.P_g[local] / gpu_def->P_atm) * (T_0 / DevArraysPtr.T[local]);
 #else
-		DevArraysPtr.ro_w[local] = def.ro0_w * (1. + (def.beta_w) * (DevArraysPtr.P_w[local] - def.P_atm));
-		DevArraysPtr.ro_n[local] = def.ro0_n * (1. + (def.beta_n) * (DevArraysPtr.P_n[local] - def.P_atm));
-		DevArraysPtr.ro_g[local] = def.ro0_g * DevArraysPtr.P_g[local] / def.P_atm;
+	DevArraysPtr.ro_w[local] = def.ro0_w * (1. + (def.beta_w) * (DevArraysPtr.P_w[local] - def.P_atm));
+	DevArraysPtr.ro_n[local] = def.ro0_n * (1. + (def.beta_n) * (DevArraysPtr.P_n[local] - def.P_atm));
+	DevArraysPtr.ro_g[local] = def.ro0_g * DevArraysPtr.P_g[local] / def.P_atm;
 #endif
-		device_test_positive(DevArraysPtr.ro_g[local], __FILE__, __LINE__);
-		device_test_positive(DevArraysPtr.ro_w[local], __FILE__, __LINE__);
-		device_test_positive(DevArraysPtr.ro_n[local], __FILE__, __LINE__);
-	}
+	device_test_positive(DevArraysPtr.ro_g[local], __FILE__, __LINE__);
+	device_test_positive(DevArraysPtr.ro_w[local], __FILE__, __LINE__);
+	device_test_positive(DevArraysPtr.ro_n[local], __FILE__, __LINE__);
 }
 
 // Вычисление координаты точки, через которую будет вычисляться значение на границе (i1, j1, k1)
@@ -225,34 +216,17 @@ __device__ double device_ro_eff_gdy(ptr_Arrays DevArraysPtr, int local)
 	return ro_g_dy;
 }
 
-// Расчет плотностей, давления NAPL P2 и Xi во всех точках сетки
-void ro_P_Xi_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+void prepare_all_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
 {
-	assign_P_Xi_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
+	prepare_local_vars_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
 	checkErrors("assign P, Xi", __FILE__, __LINE__);
-	assign_ro_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
-	checkErrors("assign ro", __FILE__, __LINE__);
 }
 
-void P_S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+void solve_nonlinear_system(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
 {
 	Newton_method_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
 	checkErrors("assign Pw and Sn", __FILE__, __LINE__);
 }
-
-#ifdef ENERGY
-void E_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
-{
-	assign_E_new_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
-	checkErrors("assign E new", __FILE__, __LINE__);
-}
-
-void H_E_current_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
-{
-	assign_H_E_current_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
-	checkErrors("assign H and E", __FILE__, __LINE__);
-}
-#endif
 
 // Расчет скорости в каждой точке сетки
 __global__ void assign_u_kernel(ptr_Arrays DevArraysPtr)
@@ -377,24 +351,9 @@ void u_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysP
 }
 
 // Расчет вспомогательной насыщенности в каждой точке сетки
-__global__ void assign_S_kernel(ptr_Arrays DevArraysPtr)
+__device__ void device_assign_S(ptr_Arrays DevArraysPtr, int local)
 {
-	int i = threadIdx.x + blockIdx.x * blockDim.x;
-	int j = threadIdx.y + blockIdx.y * blockDim.y;
-	int k = threadIdx.z + blockIdx.z * blockDim.z;
-
-	if ((i < (gpu_def->locNx)) && (j < (gpu_def->locNy)) && (k < (gpu_def->locNz)))
-	{
-		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
-		DevArraysPtr.S_g[local] = 1. - DevArraysPtr.S_w[local] - DevArraysPtr.S_n[local];
-	}
-}
-
-// Расчет вспомогательных насыщенностей во всех точках сетки
-void S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
-{
-	assign_S_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
-	checkErrors("assign S", __FILE__, __LINE__);
+	DevArraysPtr.S_g[local] = 1. - DevArraysPtr.S_w[local] - DevArraysPtr.S_n[local];
 }
 
 // Расчет ro*S в каждой точке сетки методом направленных разностей
@@ -562,8 +521,7 @@ __global__ void assign_roS_kernel(ptr_Arrays DevArraysPtr, double t)
 	}
 }
 
-// Расчет ro*S во всех точках сетки
-void roS_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def)
+void find_values_from_partial_equations(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def)
 {
 #ifdef NR
 	assign_roS_kernel_nr <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr, t);
@@ -571,6 +529,10 @@ void roS_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 	assign_roS_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr, t);
 #endif
 	checkErrors("assign roS", __FILE__, __LINE__);
+#ifdef ENERGY
+	assign_E_new_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>(DevArraysPtr);
+	checkErrors("assign E new", __FILE__, __LINE__);
+#endif
 }
 
 // Применение граничных условий

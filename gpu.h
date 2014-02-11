@@ -31,5 +31,11 @@ __device__ int device_set_boundary_basic_coordinate(int i, int j, int k);
 __device__ int device_is_injection_well(int i, int j, int k);
 __device__ int device_is_output_well(int i, int j, int k);
 __device__ void device_assing_k(double* k_w, double* k_n, double S_w);
+__device__ void device_assign_S(ptr_Arrays DevArraysPtr, int local);
+__device__ void device_assign_ro(ptr_Arrays DevArraysPtr, int local);
+#ifdef ENERGY
+__device__ void device_assign_H(ptr_Arrays DevArraysPtr, int local);
+__device__ void device_assign_E_current(ptr_Arrays DevArraysPtr, int local);
+#endif
 
 #endif

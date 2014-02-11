@@ -195,10 +195,13 @@ double assign_k_n(double S_w_e, double S_n_e, const consts &def)
 //6. Вычисление фазовых давлений c помощью капиллярных
 //7. Вычисление коэффициентов закона Дарси
 
-void assign_P_Xi(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void prepare_local_vars(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
 {
 	int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 	double k_w, k_g, k_n, Pk_nw, Pk_gn;
+
+	assign_S(HostArraysPtr, local, def);
+
 	double S_w_e = assign_S_w_e(HostArraysPtr, local, def);
 	double S_n_e = assign_S_n_e(HostArraysPtr, local, def);
 	double S_g_e = 1. - S_w_e - S_n_e;
@@ -207,7 +210,18 @@ void assign_P_Xi(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const con
 	k_g = assign_k_g(S_g_e, def);
 	k_n = assign_k_n(S_w_e, S_n_e, def);
 
+	Pk_nw = assign_P_k_nw(S_w_e, def);
+	Pk_gn = assign_P_k_gn(S_g_e, def);
+
+	HostArraysPtr.P_n[local] = HostArraysPtr.P_w[local] + Pk_nw;
+	HostArraysPtr.P_g[local] = HostArraysPtr.P_w[local] + Pk_nw + Pk_gn;
+
+	assign_ro(HostArraysPtr, local, def);
+
 #ifdef ENERGY
+	assign_H(HostArraysPtr, local, def);
+	assign_E_current(HostArraysPtr, local, def);
+
 	// Вынести в константы!!!
 	double mu_w = 1. / (29.21 * HostArraysPtr.T[local] - 7506.64);
 	double mu_n = 7.256E-10 * exp(4141.9 / HostArraysPtr.T[local]);
@@ -222,51 +236,12 @@ void assign_P_Xi(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const con
 	HostArraysPtr.Xi_g[local] = (-1.) * (def.K[media]) * k_g / def.mu_g;
 #endif
 
-	Pk_nw = assign_P_k_nw(S_w_e, def);
-	Pk_gn = assign_P_k_gn(S_g_e, def);
-
-	HostArraysPtr.P_n[local] = HostArraysPtr.P_w[local] + Pk_nw;
-	HostArraysPtr.P_g[local] = HostArraysPtr.P_w[local] + Pk_nw + Pk_gn;
-
 	test_positive(HostArraysPtr.P_n[local], __FILE__, __LINE__);
 	test_positive(HostArraysPtr.P_g[local], __FILE__, __LINE__);
 	test_nan(HostArraysPtr.Xi_w[local], __FILE__, __LINE__);
 	test_nan(HostArraysPtr.Xi_n[local], __FILE__, __LINE__);
 	test_nan(HostArraysPtr.Xi_g[local], __FILE__, __LINE__);
 }
-
-// Вспомогательная функции для метода Ньютона:
-// Нахождение обратной матрицы 3*3;
-// Теперь будет использоваться функция reverse_matrix(double* aб int n) из gauss.cpp
-/*void reverse_matrix(double* a)
-{
-	int n = 3;
-	double b[9], det = 0;
-
-	// Вычисление дополнительных миноров матрицы
-	for(int j = 0; j < n; j++)
-		for(int i = 0; i < n; i++)
-		{
-			b[i + n * j] = a[(i + 1) % n + n * ((j + 1) % n)] * a[(i + 2) % n + n * ((j + 2) % n)]
-			- a[(i + 2) % n + n * ((j + 1) % n)] * a[(i + 1) % n + n * ((j + 2) % n)];
-		}
-
-	// Нахождение детерминанта матрицы 3*3;
-	for(int i = 0; i < n; i++)
-	{
-		det += a[i] * b[i];
-	}
-	test_nan(det, __FILE__, __LINE__);
-
-	// Транспонирование и деление на детерминант
-	for(int j = 0; j < n; j++)
-		for(int i = 0; i < n; i++)
-		{
-			a[i + n * j] = b[j + n * i] / det;
-			test_nan(a[i + n * j], __FILE__, __LINE__);
-		}
-}
-*/
 
 //Функция решения системы 3*3 на основные параметры (Pn,Sw,Sg) методом Ньютона в точке (i,j,k) среды media
 //1. Вычисление эффективных насыщенностей

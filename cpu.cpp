@@ -1,16 +1,12 @@
 #include "defines.h"
 
-void ro_P_Xi_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+void prepare_all_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
 			{
-				if (ACTIVE_POINT)
-				{
-					assign_P_Xi(HostArraysPtr, i, j, k, def);
-					assign_ro(HostArraysPtr, i, j, k, def);
-				}
+				prepare_local_vars(HostArraysPtr, i, j, k, def);
 			}
 }
 
@@ -25,31 +21,7 @@ void u_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysP
 				}
 }
 
-void S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
-{
-	for (int i = 0; i < (def.locNx); i++)
-		for (int j = 0; j < (def.locNy); j++)
-			for (int k = 0; k < (def.locNz); k++)
-				{
-					assign_S(HostArraysPtr, i, j, k, def);
-				}
-}
-
-#ifdef ENERGY
-void H_E_current_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
-{
-	for (int i = 0; i < (def.locNx); i++)
-		for (int j = 0; j < (def.locNy); j++)
-			for (int k = 0; k < (def.locNz); k++)
-			{
-				int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
-				assign_H(HostArraysPtr, local, def);
-				assign_E_current(HostArraysPtr, local, def);
-			}
-}
-#endif
-
-void roS_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def)
+void find_values_from_partial_equations(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
@@ -61,23 +33,13 @@ void roS_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 #else
 					assign_roS(HostArraysPtr, t, i, j, k, def);
 #endif
-				}
-}
-
 #ifdef ENERGY
-void E_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
-{
-	for (int i = 0; i < (def.locNx); i++)
-		for (int j = 0; j < (def.locNy); j++)
-			for (int k = 0; k < (def.locNz); k++)
-				if (ACTIVE_POINT)
-				{
 					assign_E_new(HostArraysPtr, i, j, k, def);
+#endif
 				}
 }
-#endif
 
-void P_S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+void solve_nonlinear_system(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
@@ -140,10 +102,8 @@ int set_boundary_basic_coordinate(int i, int j, int k, const consts &def)
 	return (i1 + j1 * (def.locNx) + k1 * (def.locNx) * (def.locNy));
 }
 
-void assign_ro(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void assign_ro(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
 {
-	int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
-
 #ifdef ENERGY
 	// !!! Вынести коэффициенты теплового расширения в const consts &def и использовать T_0 оттуда же
 	double alfa_w = 1.32E-7; // 1/K !!! E-4
@@ -163,10 +123,8 @@ void assign_ro(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const const
 	test_ro(HostArraysPtr.ro_n[local], __FILE__, __LINE__);
 }
 
-void assign_S(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void assign_S(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
 {
-	int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
-
 	HostArraysPtr.S_g[local] = 1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local];
 	test_S(HostArraysPtr.S_g[local], __FILE__, __LINE__);
 }
@@ -572,13 +530,9 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		HostArraysPtr.roS_w[local] = HostArraysPtr.ro_w[local] * HostArraysPtr.S_w[local];
 		HostArraysPtr.roS_g[local] = HostArraysPtr.ro_g[local]
 		        * (1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local]);
-
-		double Pg = HostArraysPtr.P_g[local];
-		double fx_g, fy_g, fz_g, A3 = 0.;
-
 		HostArraysPtr.roS_n[local] = HostArraysPtr.ro_n[local] * HostArraysPtr.S_n[local];
-		double Pw = HostArraysPtr.P_w[local];
-		double Pn = HostArraysPtr.P_n[local];
+
+		double fx_g, fy_g, fz_g, A3 = 0.;
 
 		double x1, x2, y1, y2, z1, z2, fx_w, fy_w, fz_w, fx_n, fy_n, fz_n, A1 = 0., A2 = 0.;
 

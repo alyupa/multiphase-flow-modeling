@@ -199,17 +199,20 @@ __device__ double device_assign_k_n(double S_w_e, double S_n_e)
 //6. Вычисление фазовых давлений c помощью капиллярных
 //7. Вычисление коэффициентов закона Дарси
 
-__global__ void assign_P_Xi_kernel(ptr_Arrays DevArraysPtr)
+__global__ void prepare_local_vars_kernel(ptr_Arrays DevArraysPtr)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if (GPU_ACTIVE_POINT)
+	if ((i < (gpu_def->locNx)) && (j < (gpu_def->locNy)) && (k < (gpu_def->locNz)))
 	{
 		int media = 0;
 		double k_w, k_g, k_n, Pk_nw, Pk_gn;
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
+
+		device_assign_S(DevArraysPtr, local);
+
 		double S_w_e = device_assign_S_w_e(DevArraysPtr, local);
 		double S_n_e = device_assign_S_n_e(DevArraysPtr, local);
 		double S_g_e = 1. - S_w_e - S_n_e;
@@ -218,7 +221,18 @@ __global__ void assign_P_Xi_kernel(ptr_Arrays DevArraysPtr)
 		k_g = device_assign_k_g(S_g_e);
 		k_n = device_assign_k_n(S_w_e, S_n_e);
 
+		Pk_nw = device_assign_P_k_nw(S_w_e);
+		Pk_gn = device_assign_P_k_gn(S_g_e);
+
+		DevArraysPtr.P_n[local] = DevArraysPtr.P_w[local] + Pk_nw;
+		DevArraysPtr.P_g[local] = DevArraysPtr.P_n[local] + Pk_gn;
+
+		device_assign_ro(DevArraysPtr, local);
+
 #ifdef ENERGY
+		device_assign_H(DevArraysPtr, local);
+		device_assign_E_current(DevArraysPtr, local);
+
 		// Вынести в константы!!!
 		double mu_w = 1. / (29.21 * DevArraysPtr.T[local] - 7506.64);
 		double mu_n = 7.256E-10 * exp(4141.9 / DevArraysPtr.T[local]);
@@ -233,12 +247,6 @@ __global__ void assign_P_Xi_kernel(ptr_Arrays DevArraysPtr)
 		DevArraysPtr.Xi_g[local] = (-1.) * (gpu_def->K[media]) * k_g / gpu_def->mu_g;
 #endif
 
-		Pk_nw = device_assign_P_k_nw(S_w_e);
-		Pk_gn = device_assign_P_k_gn(S_g_e);
-
-		DevArraysPtr.P_n[local] = DevArraysPtr.P_w[local] + Pk_nw;
-		DevArraysPtr.P_g[local] = DevArraysPtr.P_n[local] + Pk_gn;
-
 		device_test_positive(DevArraysPtr.P_n[local], __FILE__, __LINE__);
 		device_test_positive(DevArraysPtr.P_g[local], __FILE__, __LINE__);
 		device_test_nan(DevArraysPtr.Xi_w[local], __FILE__, __LINE__);
@@ -246,38 +254,6 @@ __global__ void assign_P_Xi_kernel(ptr_Arrays DevArraysPtr)
 		device_test_nan(DevArraysPtr.Xi_g[local], __FILE__, __LINE__);
 	}
 }
-
-// Вспомогательная функции для метода Ньютона:
-// Нахождение обратной матрицы 3*3;
-/* __device__ void device_reverse_matrix(double* a)
-{
-	int n = 3;
-	double b[9], det = 0;
-
-	// Вычисление дополнительных миноров матрицы
-	for(int j = 0; j < n; j++)
-		for(int i = 0; i < n; i++)
-		{
-			b[i + n * j] = a[(i + 1) % n + n * ((j + 1) % n)] * a[(i + 2) % n + n * ((j + 2) % n)]
-			- a[(i + 2) % n + n * ((j + 1) % n)] * a[(i + 1) % n + n * ((j + 2) % n)];
-		}
-
-		// Нахождение детерминанта матрицы 3*3;
-		for(int i = 0; i < n; i++)
-		{
-			det += a[i] * b[i];
-		}
-		device_test_nan(det, __FILE__, __LINE__);
-
-		// Транспонирование и деление на детерминант
-		for(int j = 0; j < n; j++)
-			for(int i = 0; i < n; i++)
-			{
-				a[i + n * j] = b[j + n * i] / det;
-				device_test_nan(a[i + n * j], __FILE__, __LINE__);
-			}
-}
-*/
 
 //Функция решения системы 3*3 на основные параметры (Pn,Sw,Sg) методом Ньютона в точке (i,j,k) среды media
 //1. Вычисление эффективных насыщенностей

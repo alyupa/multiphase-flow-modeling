@@ -129,7 +129,7 @@ __device__ double assign_H_r (double T)
 	return (gpu_def->P_atm / ro_r) + (T - T_0) * (c0_r + C_r * (T - T_0) / 2);
 }
 
-__device__ void assign_H (ptr_Arrays DevArraysPtr, int local)
+__device__ void device_assign_H (ptr_Arrays DevArraysPtr, int local)
 {
 	DevArraysPtr.H_w[local] = assign_H_w (DevArraysPtr.T[local]);
 	DevArraysPtr.H_n[local] = assign_H_n (DevArraysPtr.T[local]);
@@ -315,7 +315,7 @@ __device__ double assign_E_flow (ptr_Arrays DevArraysPtr, int i, int j, int k)
 }
 
 // Расчет внутренней энергии всей системы в точке
-__device__ void assign_E_current (ptr_Arrays DevArraysPtr, int local)
+__device__ void device_assign_E_current (ptr_Arrays DevArraysPtr, int local)
 {
 	DevArraysPtr.E[local] = (DevArraysPtr.m[local] * (DevArraysPtr.S_w[local] * (DevArraysPtr.ro_w[local] * DevArraysPtr.H_w[local] - DevArraysPtr.P_w[local])
 		+ DevArraysPtr.S_n[local] * (DevArraysPtr.ro_n[local] * DevArraysPtr.H_n[local] - DevArraysPtr.P_n[local])
@@ -341,21 +341,6 @@ __global__ void assign_E_new_kernel (ptr_Arrays DevArraysPtr)
 		DevArraysPtr.E_new[local] = DevArraysPtr.E[local] + (gpu_def->dt) * (assign_T_flow(DevArraysPtr, i, j, k) + Q_hw + Q_hr - assign_E_flow(DevArraysPtr, i, j, k));
 
 		device_test_nan(DevArraysPtr.E_new[local], __FILE__, __LINE__);
-	}
-}
-
-__global__ void assign_H_E_current_kernel (ptr_Arrays DevArraysPtr)
-{
-	int i = threadIdx.x + blockIdx.x * blockDim.x;
-	int j = threadIdx.y + blockIdx.y * blockDim.y;
-	int k = threadIdx.z + blockIdx.z * blockDim.z;
-	
-	if (GPU_ACTIVE_POINT)
-	{
-		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
-		
-		assign_H(DevArraysPtr, local);
-		assign_E_current(DevArraysPtr, local);
 	}
 }
 
@@ -471,7 +456,7 @@ __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 			DevArraysPtr.S_g[local] = DevArraysPtr.S_g[local] - correction[2];
 			DevArraysPtr.P_w[local] = DevArraysPtr.P_w[local] - correction[3];
 			DevArraysPtr.T[local] = DevArraysPtr.T[local] - correction[4];
-			assign_H(DevArraysPtr, local);
+			device_assign_H(DevArraysPtr, local);
 		}
 
 		// Обновление значения суммарной энергии, т.к. оно больше не понадобится
