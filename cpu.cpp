@@ -6,7 +6,7 @@ void ro_P_Xi_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevA
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
 			{
-				if (is_active_point(i, j, k, def))
+				if (ACTIVE_POINT)
 				{
 					assign_P_Xi(HostArraysPtr, i, j, k, def);
 					assign_ro(HostArraysPtr, i, j, k, def);
@@ -19,7 +19,7 @@ void u_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysP
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
-				if (is_active_point(i, j, k, def))
+				if (ACTIVE_POINT)
 				{
 					assign_u(HostArraysPtr, i, j, k, def);
 				}
@@ -54,7 +54,7 @@ void roS_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
-				if (is_active_point(i, j, k, def))
+				if (ACTIVE_POINT)
 				{
 #ifdef NR
 					assign_roS_nr(HostArraysPtr, t, i, j, k, def);
@@ -70,7 +70,7 @@ void E_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysP
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
-				if (is_active_point(i, j, k, def))
+				if (ACTIVE_POINT)
 				{
 					assign_E_new(HostArraysPtr, i, j, k, def);
 				}
@@ -82,7 +82,7 @@ void P_S_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
-				if (is_active_point(i, j, k, def))
+				if (ACTIVE_POINT)
 				{
 					Newton(HostArraysPtr, i, j, k, def);
 				}
@@ -93,7 +93,7 @@ void boundary_conditions(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevA
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
-				if (is_active_point(i, j, k, def))
+				if (ACTIVE_POINT)
 				{
 					Border_S(HostArraysPtr, i, j, k, def);
 					Border_P(HostArraysPtr, i, j, k, def);
@@ -442,7 +442,7 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 
 void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def)
 {
-	if ((i != 0) && (i != (def.locNx) - 1) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.Nz) < 2)))
+	if (INTERNAL_POINT)
 	{
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 		double divgrad1, divgrad2, Tx1, Ty1, Tz1, Tx2, Ty2, Tz2, A1 = 0, A2 = 0;
@@ -555,7 +555,7 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 
 void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def)
 {
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if (INTERNAL_POINT)
 	{
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 

@@ -205,7 +205,7 @@ __global__ void assign_P_Xi_kernel(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if ((i < (gpu_def->locNx)) && (j < (gpu_def->locNy)) && (k < (gpu_def->locNz)) && (device_is_active_point(i, j, k) == 1))
+	if (GPU_ACTIVE_POINT)
 	{
 		int media = 0;
 		double k_w, k_g, k_n, Pk_nw, Pk_gn;
@@ -233,18 +233,14 @@ __global__ void assign_P_Xi_kernel(ptr_Arrays DevArraysPtr)
 		DevArraysPtr.Xi_g[local] = (-1.) * (gpu_def->K[media]) * k_g / gpu_def->mu_g;
 #endif
 
-		if ((i != 0) && (i != (gpu_def->locNx) - 1) && (j != 0) && (j != (gpu_def->locNy) - 1) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
-		{
-			Pk_nw = device_assign_P_k_nw(S_w_e);
-			Pk_gn = device_assign_P_k_gn(S_g_e);
+		Pk_nw = device_assign_P_k_nw(S_w_e);
+		Pk_gn = device_assign_P_k_gn(S_g_e);
 
-			DevArraysPtr.P_n[local] = DevArraysPtr.P_w[local] + Pk_nw;
-			DevArraysPtr.P_g[local] = DevArraysPtr.P_n[local] + Pk_gn;
+		DevArraysPtr.P_n[local] = DevArraysPtr.P_w[local] + Pk_nw;
+		DevArraysPtr.P_g[local] = DevArraysPtr.P_n[local] + Pk_gn;
 
-			device_test_positive(DevArraysPtr.P_n[local], __FILE__, __LINE__);
-			device_test_positive(DevArraysPtr.P_g[local], __FILE__, __LINE__);
-		}
-
+		device_test_positive(DevArraysPtr.P_n[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr.P_g[local], __FILE__, __LINE__);
 		device_test_nan(DevArraysPtr.Xi_w[local], __FILE__, __LINE__);
 		device_test_nan(DevArraysPtr.Xi_n[local], __FILE__, __LINE__);
 		device_test_nan(DevArraysPtr.Xi_g[local], __FILE__, __LINE__);
@@ -300,9 +296,7 @@ __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if ((i < gpu_def->locNx) && (j < gpu_def->locNy) && (k < gpu_def->locNz))
-	if ((i != 0) && (i < (gpu_def->locNx) - 1) && (j != 0) && (j < (gpu_def->locNy) - 1) && (((k != 0) && (k < (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2))
-		&& (device_is_active_point(i, j, k) == 1))
+	if (GPU_INTERNAL_POINT)
 	{
 		double S_w_e, S_g_e, S_n_e, Pk_nw, Pk_gn, PkSw, PkSn, Sg, F1, F2, F3;
 		double dF[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -366,9 +360,7 @@ __global__ void Border_S_kernel(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if ((i < gpu_def->locNx) && (j < gpu_def->locNy) && (k < gpu_def->locNz))
-	if (((i == 0) || (i == (gpu_def->locNx) - 1) || (j == 0) || (j == (gpu_def->locNy) - 1) ||
-		(((k == 0) || (k == (gpu_def->locNz) - 1)) && ((gpu_def->locNz) >= 2))) && (device_is_active_point(i, j, k) == 1))
+	if (GPU_BOUNDARY_POINT)
 	{
 		int local1 = device_set_boundary_basic_coordinate(i, j, k);
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
@@ -395,9 +387,7 @@ __global__ void Border_P_kernel(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if ((i < gpu_def->locNx) && (j < gpu_def->locNy) && (k < gpu_def->locNz))
-	if (((i == 0) || (i == (gpu_def->locNx) - 1) || (j == 0) || (j == (gpu_def->locNy) - 1) ||
-		(((k == 0) || (k == (gpu_def->locNz) - 1)) && ((gpu_def->locNz) >= 2))) && (device_is_active_point(i, j, k) == 1))
+	if (GPU_BOUNDARY_POINT)
 	{
 		int local1 = device_set_boundary_basic_coordinate(i, j, k);
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);

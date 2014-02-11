@@ -16,7 +16,7 @@ __global__ void assign_ro_kernel(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if ((i < (gpu_def->locNx)) && (j < (gpu_def->locNy)) && (k < (gpu_def->locNz)) && (device_is_active_point(i, j, k) == 1))
+	if (GPU_ACTIVE_POINT)
 	{
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
@@ -217,21 +217,6 @@ __device__ int device_local_to_global(int local_index, char axis)
 	return global_index;
 }
 
-// Является ли точка активной (т.е. не предназначенной только для обмена на границах)
-__device__ int device_is_active_point(int i, int j, int k)
-{
-	if (((gpu_def -> rankx) != 0 && i == 0) || ((gpu_def -> rankx) != (gpu_def -> sizex) - 1 && i == (gpu_def -> locNx) - 1)
-		|| ((gpu_def -> ranky) != 0 && j == 0)	|| ((gpu_def -> ranky) != (gpu_def -> sizey) - 1 && j == (gpu_def -> locNy) - 1)
-		|| ((((gpu_def -> rankz) != 0 && k == 0) || ((gpu_def -> rankz) != (gpu_def -> sizez) - 1 && k == (gpu_def -> locNz) - 1)) && (gpu_def -> Nz) >= 2))
-	{
-		return 0;
-	}
-	else
-	{
-		return 1;
-	}
-}
-
 // Функция вычисления "эффективной" плотности
 __device__ double device_ro_eff_gdy(ptr_Arrays DevArraysPtr, int local)
 {
@@ -276,7 +261,7 @@ __global__ void assign_u_kernel(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if ((i < (gpu_def->locNx)) && (j < (gpu_def->locNy)) && (k < (gpu_def->locNz)) && (device_is_active_point(i, j, k) == 1))
+	if (GPU_ACTIVE_POINT)
 	{
 		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 		if ((gpu_def->Nx) > 2)
@@ -419,7 +404,7 @@ __global__ void assign_roS_kernel_nr(ptr_Arrays DevArraysPtr, double t)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if ((i < (gpu_def->locNx) - 1) && (j < gpu_def->locNy - 1) && (k < (gpu_def->locNz)) && (i != 0) && (j != 0) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
+	if (GPU_INTERNAL_POINT)
 	{
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
@@ -514,7 +499,7 @@ __global__ void assign_roS_kernel(ptr_Arrays DevArraysPtr, double t)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if ((i < (gpu_def->locNx) - 1) && (j < gpu_def->locNy - 1) && (k < (gpu_def->locNz)) && (i != 0) && (j != 0) && (((k != 0) && (k != (gpu_def->locNz))) || ((gpu_def->locNz) < 2)))
+	if (GPU_INTERNAL_POINT)
 	{
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 		double S_n = DevArraysPtr.S_n[local];

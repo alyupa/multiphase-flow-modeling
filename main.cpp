@@ -607,7 +607,7 @@ void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, i
 		for (int i = 0; i < def.locNx; i++)
 			for (int j = 0; j < def.locNy; j++)
 				for (int k = 0; k < def.locNz; k++)
-					if (is_active_point(i, j, k, def))
+					if (ACTIVE_POINT)
 						print_plot_row(HostArraysPtr, fp, i, j, k, def);
 	}
 	else
@@ -1212,7 +1212,7 @@ void data_initialization(const ptr_Arrays &HostArraysPtr, long int* t, const con
 	for (int i = 0; i < def.locNx; i++)
 		for (int j = 0; j < def.locNy; j++)
 			for (int k = 0; k < def.locNz; k++)
-				if (is_active_point(i, j, k, def))
+				if (ACTIVE_POINT)
 				{
 					int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 

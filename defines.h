@@ -42,6 +42,19 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
+// Point is active
+#define ACTIVE_POINT !( ((((def.rankx) != 0 && i == 0) || ((def.rankx) != (def.sizex) - 1 && i == (def.locNx) - 1)) && (def.Nx) >= 2) \
+					 || ((((def.ranky) != 0 && j == 0) || ((def.ranky) != (def.sizey) - 1 && j == (def.locNy) - 1)) && (def.Ny) >= 2) \
+					 || ((((def.rankz) != 0 && k == 0) || ((def.rankz) != (def.sizez) - 1 && k == (def.locNz) - 1)) && (def.Nz) >= 2))
+
+// Point is internal condition
+#define INTERNAL_POINT ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) \
+		&& (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+
+// Point is on boundary
+#define BOUNDARY_POINT ((((i == 0) || (i == (def.locNx) - 1)) && ((def.locNx) >= 2)) || (j == 0) || (j == (def.locNy) - 1) \
+		|| (((k == 0) || (k == (def.locNz) - 1)) && ((def.locNz) >= 2)))
+
 /*!
 * Структура "параметры расчетной точки"
 */

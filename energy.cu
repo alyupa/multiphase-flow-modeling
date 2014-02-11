@@ -234,7 +234,7 @@ __device__ double d_ro(double P, double T, char phase, char var)
 // Расчет теплового потока в точке
 __device__ double assign_T_flow (ptr_Arrays DevArraysPtr, int i, int j, int k)
 {
-	if ((i < (gpu_def->locNx) - 1) && (j < gpu_def->locNy - 1) && (k < (gpu_def->locNz)) && (i != 0) && (j != 0) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
+	if (GPU_INTERNAL_POINT)
 	{
 		double T_flow = 0;
 		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
@@ -270,7 +270,7 @@ __device__ double assign_T_flow (ptr_Arrays DevArraysPtr, int i, int j, int k)
 __device__ double assign_E_flow (ptr_Arrays DevArraysPtr, int i, int j, int k)
 {
 	
-	if ((i < (gpu_def->locNx) - 1) && (j < gpu_def->locNy - 1) && (k < (gpu_def->locNz)) && (i != 0) && (j != 0) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
+	if (GPU_INTERNAL_POINT)
 	{
 		double E_flow = 0;
 		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
@@ -332,7 +332,7 @@ __global__ void assign_E_new_kernel (ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 	
-	if ((i < (gpu_def->locNx) - 1) && (j < gpu_def->locNy - 1) && (k < (gpu_def->locNz)) && (i != 0) && (j != 0) && (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2)))
+	if (GPU_INTERNAL_POINT)
 	{
 		double Q_hw = 0, Q_hr = 0; // источниковые члены
 
@@ -350,7 +350,7 @@ __global__ void assign_H_E_current_kernel (ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 	
-	if ((i < (gpu_def->locNx)) && (j < (gpu_def->locNy)) && (k < (gpu_def->locNz)) && (device_is_active_point(i, j, k) == 1))
+	if (GPU_ACTIVE_POINT)
 	{
 		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 		
@@ -366,9 +366,7 @@ __global__ void Border_T_kernel(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 	
-	if ((i < gpu_def->locNx) && (j < gpu_def->locNy) && (k < gpu_def->locNz))
-	if (((i == 0) || (i == (gpu_def->locNx) - 1) || (j == 0) || (j == (gpu_def->locNy) - 1) ||
-		(((k == 0) || (k == (gpu_def->locNz) - 1)) && ((gpu_def->locNz) >= 2))) && (device_is_active_point(i, j, k) == 1))
+	if (GPU_BOUNDARY_POINT)
 	{
 		int local1 = device_set_boundary_basic_coordinate(i, j, k);
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
@@ -399,9 +397,7 @@ __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
 	int k = threadIdx.z + blockIdx.z * blockDim.z;
 	
-	if ((i < gpu_def->locNx) && (j < gpu_def->locNy) && (k < gpu_def->locNz))
-	if ((i != 0) && (i < (gpu_def->locNx) - 1) && (j != 0) && (j < (gpu_def->locNy) - 1) && (((k != 0) && (k < (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2))
-		&& (device_is_active_point(i, j, k) == 1))
+	if (GPU_INTERNAL_POINT)
 	{
 		int n = 5; // Размерность системы
 		double *F; // Вектор значений функций (из системы уравнений)

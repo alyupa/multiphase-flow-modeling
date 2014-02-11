@@ -222,18 +222,14 @@ void assign_P_Xi(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const con
 	HostArraysPtr.Xi_g[local] = (-1.) * (def.K[media]) * k_g / def.mu_g;
 #endif
 
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
-	{
-		Pk_nw = assign_P_k_nw(S_w_e, def);
-		Pk_gn = assign_P_k_gn(S_g_e, def);
+	Pk_nw = assign_P_k_nw(S_w_e, def);
+	Pk_gn = assign_P_k_gn(S_g_e, def);
 
-		HostArraysPtr.P_n[local] = HostArraysPtr.P_w[local] + Pk_nw;
-		HostArraysPtr.P_g[local] = HostArraysPtr.P_w[local] + Pk_nw + Pk_gn;
+	HostArraysPtr.P_n[local] = HostArraysPtr.P_w[local] + Pk_nw;
+	HostArraysPtr.P_g[local] = HostArraysPtr.P_w[local] + Pk_nw + Pk_gn;
 
-		test_positive(HostArraysPtr.P_n[local], __FILE__, __LINE__);
-		test_positive(HostArraysPtr.P_g[local], __FILE__, __LINE__);
-	}
-
+	test_positive(HostArraysPtr.P_n[local], __FILE__, __LINE__);
+	test_positive(HostArraysPtr.P_g[local], __FILE__, __LINE__);
 	test_nan(HostArraysPtr.Xi_w[local], __FILE__, __LINE__);
 	test_nan(HostArraysPtr.Xi_n[local], __FILE__, __LINE__);
 	test_nan(HostArraysPtr.Xi_g[local], __FILE__, __LINE__);
@@ -285,7 +281,7 @@ void assign_P_Xi(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const con
 #ifndef ENERGY
 void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
 {
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if (INTERNAL_POINT)
 	{
 		double S_w_e, S_g_e, S_n_e, Pk_nw, Pk_gn, PkSw, PkSn, Sg, F1, F2, F3;
 		double dF[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -344,7 +340,7 @@ void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &
 // Задание граничных условий с меньшим числом проверок, но с введением дополнительных переменных
 void Border_S(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
 {
-	if ((((i == 0) || (i == (def.locNx) - 1)) && ((def.locNx) >= 2)) || (j == 0) || (j == (def.locNy) - 1) || (((k == 0) || (k == (def.locNz) - 1)) && ((def.locNz) >= 2)))
+	if (BOUNDARY_POINT)
 	{
 		int local1 = set_boundary_basic_coordinate(i, j, k, def);
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
@@ -367,7 +363,7 @@ void Border_S(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 
 void Border_P(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
 {
-	if ((((i == 0) || (i == (def.locNx) - 1)) && ((def.locNx) >= 2)) || (j == 0) || (j == (def.locNy) - 1) || (((k == 0) || (k == (def.locNz) - 1)) && ((def.locNz) >= 2)))
+	if (BOUNDARY_POINT)
 	{
 		int local1 = set_boundary_basic_coordinate(i, j, k, def);
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);

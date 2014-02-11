@@ -234,7 +234,7 @@ double d_ro(double P, double T, char phase, char var, const consts &def)
 // Расчет теплового потока в точке
 double assign_T_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
 {	
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if (INTERNAL_POINT)
 	{
 		double T_flow = 0;
 		int local=i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
@@ -269,7 +269,7 @@ double assign_T_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, cons
 // Расчет потока энергии в точке
 double assign_E_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k,  const consts &def)
 {
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if (INTERNAL_POINT)
 	{
 		double E_flow = 0;
 		int local=i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
@@ -327,7 +327,7 @@ void assign_E_current (const ptr_Arrays &HostArraysPtr, int local, const consts 
 // Расчет внутренней энергии всей системы в точке на следующем шаге по времени
 void assign_E_new (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
 {
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if (INTERNAL_POINT)
 	{
 		double Q_hw = 0, Q_hr = 0; // источниковые члены
 
@@ -342,7 +342,7 @@ void assign_E_new (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const c
 // Задание граничных условий на температуру
 void Border_T(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
 {
-	if ((((i == 0) || (i == (def.locNx) - 1)) && ((def.locNx) >= 2)) || (j == 0) || (j == (def.locNy) - 1) || (((k == 0) || (k == (def.locNz) - 1)) && ((def.locNz) >= 2)))
+	if (BOUNDARY_POINT)
 	{
 		int local1 = set_boundary_basic_coordinate(i, j, k, def);
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
@@ -369,7 +369,7 @@ void Border_T(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 // !!! Пока "выбросим" капиллярные давления
 void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
 {
-	if ((((i != 0) && (i != (def.locNx) - 1)) || ((def.locNx) < 2)) && (j != 0) && (j != (def.locNy) - 1) && (((k != 0) && (k != (def.locNz) - 1)) || ((def.locNz) < 2)))
+	if (INTERNAL_POINT)
 	{
 		int n = 5; // Размерность системы
 		double *F; // Вектор значений функций (из системы уравнений)
