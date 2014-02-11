@@ -299,7 +299,8 @@ void initialization(ptr_Arrays* HostArraysPtr, ptr_Arrays* DevArraysPtr, long in
 
 	// Если процессор может открыть файл сохраненного состояния,
 	// то восстанавливаем состояние, иначе применяем начальные условия
-	if (f_save = fopen("save/save.dat", "rb"))
+	f_save = fopen("save/save.dat", "rb");
+	if (f_save)
 	{
 		fclose(f_save);
 		restore(*HostArraysPtr, time_counter, *def);
@@ -315,6 +316,7 @@ void initialization(ptr_Arrays* HostArraysPtr, ptr_Arrays* DevArraysPtr, long in
 	load_data_to_device((*HostArraysPtr).P_g, (*DevArraysPtr).P_g, *def);
 	load_data_to_device((*HostArraysPtr).P_w, (*DevArraysPtr).P_w, *def);
 	load_data_to_device((*HostArraysPtr).S_n, (*DevArraysPtr).S_n, *def);
+	load_data_to_device((*HostArraysPtr).S_g, (*DevArraysPtr).S_g, *def);
 	load_data_to_device((*HostArraysPtr).roS_w_old, (*DevArraysPtr).roS_w_old, *def);
 	load_data_to_device((*HostArraysPtr).roS_n_old, (*DevArraysPtr).roS_n_old, *def);
 	load_data_to_device((*HostArraysPtr).m, (*DevArraysPtr).m, *def);
@@ -473,6 +475,7 @@ void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 	load_data_to_host(HostArraysPtr.uz_g, DevArraysPtr.uz_g , def);
 	load_data_to_host(HostArraysPtr.P_w, DevArraysPtr.P_w , def);
 	load_data_to_host(HostArraysPtr.S_n, DevArraysPtr.S_n , def);
+	load_data_to_host(HostArraysPtr.S_g, DevArraysPtr.S_g , def);
 	load_data_to_host(HostArraysPtr.ux_n, DevArraysPtr.ux_n , def);
 	load_data_to_host(HostArraysPtr.uy_n, DevArraysPtr.uy_n , def);
 	load_data_to_host(HostArraysPtr.uz_n, DevArraysPtr.uz_n , def);
@@ -599,7 +602,7 @@ void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, i
 	if (!(fp = fopen(fname, "at")))
 		print_error("Not open file(s) in function SAVE_DATA_PLOTS", __FILE__, __LINE__);
 
-	if((def.sizey == 1) && (def.sizez == 1) || (I == -1) && (J == -1))
+	if(((def.sizey == 1) && (def.sizez == 1)) || ((I == -1) && (J == -1)))
 	{
 		for (int i = 0; i < def.locNx; i++)
 			for (int j = 0; j < def.locNy; j++)
