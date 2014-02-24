@@ -1,18 +1,14 @@
 #include "defines.h"
 
-// Буферные массивы для обмена между процессорами
 double *HostBuffer;
 double *DevBuffer;
+consts def;
+ptr_Arrays HostArraysPtr;
+ptr_Arrays DevArraysPtr;
 
 int main(int argc, char* argv[])
 {
-	consts def;
-	read_defines(argc, argv, &def);
-
-	// Хостовый массив данных расчетной области процессора
-	ptr_Arrays HostArraysPtr;
-	// GPU-массив данных расчетной области процессора
-	ptr_Arrays DevArraysPtr;
+	read_defines(argc, argv);
 	// Счетчик шагов по времени
 	long int time_counter = 0;
 	// Счетчик времени исполнения вычислительной части программы
@@ -20,11 +16,11 @@ int main(int argc, char* argv[])
 
 	// Инициализация коммуникаций, перевод глобальных параметров в локальные процессора,
 	// выделение памяти, загрузка начальных/сохраненных данных
-	initialization(&HostArraysPtr, &DevArraysPtr, &time_counter, argc, argv, &def);
+	initialization(&time_counter, argc, argv);
 
 	// Тест
-	//print_hosts_configuration(def);
-	save_data_plots(HostArraysPtr, DevArraysPtr, 0, def);
+	//print_hosts_configuration();
+	save_data_plots(0);
 
 	task_time = clock();
 
@@ -43,14 +39,14 @@ int main(int argc, char* argv[])
 			fflush(stdout);
 		}
 
-		time_step_function(HostArraysPtr, DevArraysPtr, DevBuffer, def, time_counter * (def.dt)); // (1)
+		time_step_function(time_counter * (def.dt)); // (1)
 
 		if ((time_counter % (def.save_plots)) == 0) // (3)
 		{
 			// Следующие 2 функции вызываются строго в таком порядке,
 			// т.к. save использует данные, загруженные save_data_plots
-			save_data_plots(HostArraysPtr, DevArraysPtr, time_counter * (def.dt) /def.upscale_t, def); // (**)
-			//save(HostArraysPtr, DevArraysPtr, time_counter, def); // (***)
+			save_data_plots(time_counter * (def.dt) /def.upscale_t); // (**)
+			//save(time_counter); // (***)
 		}
 	}
 
@@ -64,7 +60,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Завершение работы и освобождение памяти
-	finalization(HostArraysPtr, DevArraysPtr, DevBuffer);
+	finalization();
 
 	// При запуске в Windows после работы программы оставлять окно консоли
 #ifdef _WIN32
@@ -83,14 +79,14 @@ int main(int argc, char* argv[])
 // 7. Применение граничных условий для P1 и S2
 // 8. Обмен между процессорами пограничными значениями P1 и S2
 // 9.Вычисление суммарной внутренней энергии на следующем временном слое
-void time_step_function(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* DevBuffer, const consts &def, double t)
+void time_step_function(double t)
 {
-	boundary_conditions(HostArraysPtr, DevArraysPtr, def); // (7)
-	prepare_all_vars(HostArraysPtr, DevArraysPtr, def); // (1)
-	u_calculation(HostArraysPtr, DevArraysPtr, def); // (3)
-	find_values_from_partial_equations(HostArraysPtr, DevArraysPtr, t, def); // (5)
-	solve_nonlinear_system(HostArraysPtr, DevArraysPtr, def); // (6)
-	exchange_basic_vars(HostArraysPtr, DevArraysPtr, HostBuffer, DevBuffer, def); // (8)
+	boundary_conditions(); // (7)
+	prepare_all_vars(); // (1)
+	u_calculation(); // (3)
+	find_values_from_partial_equations(t); // (5)
+	solve_nonlinear_system(); // (6)
+	exchange_basic_vars(); // (8)
 }
 
 // Преобразование локальных координат процессора к глобальным
@@ -98,24 +94,24 @@ void time_step_function(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevAr
 // обмена данными, если имеет соседа
 // (если 2 соседа с обеих сторон,то +2 точки).
 // Глобальные границы хранятся как обычные точки (отсюда и условие на (def.rank)==0)
-int local_to_global(int local_index, char axis, const consts &def)
+int local_to_global(int local_index, char axis)
 {
 	int global_index = local_index;
 	switch (axis)
 	{
 	case 'x':
 	{
-		global_index += def.rankx * (def.Nx / def.sizex) + min(def.rankx, def.Nx % def.sizex) - min(def.rankx, 1);
+		global_index += def.rankx * (def.Nx / def.sizex) + my_min(def.rankx, def.Nx % def.sizex) - my_min(def.rankx, 1);
 		break;
 	}
 	case 'y':
 	{
-		global_index += def.ranky * (def.Ny / def.sizey) + min(def.ranky, def.Ny % def.sizey) - min(def.ranky, 1);
+		global_index += def.ranky * (def.Ny / def.sizey) + my_min(def.ranky, def.Ny % def.sizey) - my_min(def.ranky, 1);
 		break;
 	}
 	case 'z':
 	{
-		global_index += def.rankz * (def.Nz / def.sizez) + min(def.rankz, def.Nz % def.sizez) - min(def.rankz, 1);
+		global_index += def.rankz * (def.Nz / def.sizez) + my_min(def.rankz, def.Nz % def.sizez) - my_min(def.rankz, 1);
 		break;
 	}
 	default:
@@ -133,80 +129,80 @@ int local_to_global(int local_index, char axis, const consts &def)
 // обмена данными, если имеет соседа
 // (если 2 соседа с обеих сторон,то +2 точки).
 // Глобальные границы хранятся как обычные точки (отсюда и условие на (def.rank)==0)
-void global_to_local_vars(consts *def)
+void global_to_local_vars()
 {
-	(*def).locNx = (*def).Nx / (*def).sizex;
+	def.locNx = def.Nx / def.sizex;
 
-	if ((*def).rankx < (*def).Nx % (*def).sizex)
+	if (def.rankx < def.Nx % def.sizex)
 	{
-		((*def).locNx) ++;
+		(def.locNx) ++;
 	}
 
 	// Крайние процессоры получают по 1 точке для граничных данных,
 	// остальные - по 2 на обе границы
 	// Если процессор один, то границ у него нет и дополнительные точки не нужны
-	if ((*def).sizex > 1)
+	if (def.sizex > 1)
 	{
-		if (((*def).rankx == 0) || ((*def).rankx  == (*def).sizex - 1))
+		if ((def.rankx == 0) || (def.rankx  == def.sizex - 1))
 		{
-			((*def).locNx) ++;
+			(def.locNx) ++;
 		}
 		else
 		{
-			((*def).locNx) += 2;
+			(def.locNx) += 2;
 		}
 	}
 
-	(*def).locNy = (*def).Ny / (*def).sizey;
+	def.locNy = def.Ny / def.sizey;
 
-	if (((*def).ranky < (*def).Ny % (*def).sizey))
+	if ((def.ranky < def.Ny % def.sizey))
 	{
-		((*def).locNy) ++;
+		(def.locNy) ++;
 	}
 
-	if ((*def).sizey > 1)
+	if (def.sizey > 1)
 	{
-		if (((*def).ranky == 0) || ((*def).ranky == (*def).sizey - 1))
+		if ((def.ranky == 0) || (def.ranky == def.sizey - 1))
 		{
-			((*def).locNy) ++;
+			(def.locNy) ++;
 		}
 		else
 		{
-			((*def).locNy) += 2;
+			(def.locNy) += 2;
 		}
 	}
 
-	(*def).locNz = (*def).Nz / (*def).sizez;
+	def.locNz = def.Nz / def.sizez;
 
-	if ((*def).rankz < (*def).Nz % (*def).sizez)
+	if (def.rankz < def.Nz % def.sizez)
 	{
-		((*def).locNz) ++;
+		(def.locNz) ++;
 	}
 
-	if ((*def).sizez > 1)
+	if (def.sizez > 1)
 	{
-		if (((*def).rankz == 0) || ((*def).rankz == (*def).sizez - 1))
+		if ((def.rankz == 0) || (def.rankz == def.sizez - 1))
 		{
-			((*def).locNz) ++;
+			(def.locNz) ++;
 		}
 		else
 		{
-			((*def).locNz) += 2;
+			(def.locNz) += 2;
 		}
 	}
 
-	if((*def).rank >= (*def).sizex * (*def).sizey * (*def).sizez)
+	if(def.rank >= def.sizex * def.sizey * def.sizez)
 	{
-		(*def).locNx = (*def).locNy = (*def).locNz = 0;
+		def.locNx = def.locNy = def.locNz = 0;
 	}
 
-	test_positive((*def).locNx, __FILE__, __LINE__);
-	test_positive((*def).locNy, __FILE__, __LINE__);
-	test_positive((*def).locNz, __FILE__, __LINE__);
+	test_positive(def.locNx, __FILE__, __LINE__);
+	test_positive(def.locNy, __FILE__, __LINE__);
+	test_positive(def.locNz, __FILE__, __LINE__);
 }
 
 // Является ли точка активной (т.е. не предназначенной только для обмена на границах)
-int is_active_point(int i, int j, int k, const consts &def)
+int is_active_point(int i, int j, int k)
 {
 	if (   ((((def.rankx) != 0 && i == 0) || ((def.rankx) != (def.sizex) - 1 && i == (def.locNx) - 1)) && (def.Nx) >= 2)
 	    || ((((def.ranky) != 0 && j == 0) || ((def.ranky) != (def.sizey) - 1 && j == (def.locNy) - 1)) && (def.Ny) >= 2)
@@ -221,24 +217,24 @@ int is_active_point(int i, int j, int k, const consts &def)
 }
 
 // Применение начальных данных во всех точках
-void sizes_initialization(consts *def)
+void sizes_initialization()
 {
-	division(def);
+	division();
 
-	(*def).rankx = (*def).rank % (*def).sizex;
-	(*def).ranky = ((*def).rank / (*def).sizex) % (*def).sizey;
-	(*def).rankz = ((*def).rank / (*def).sizex) / (*def).sizey;
+	def.rankx = def.rank % def.sizex;
+	def.ranky = (def.rank / def.sizex) % def.sizey;
+	def.rankz = (def.rank / def.sizex) / def.sizey;
 }
 
-void blocks_initialization(consts *def)
+void blocks_initialization()
 {
-	(*def).blocksX = 0;
-	(*def).blocksY = 0;
-	(*def).blocksZ = 0;
+	def.blocksX = 0;
+	def.blocksY = 0;
+	def.blocksZ = 0;
 }
 
 // Функция вычисления "эффективной" плотности * g * hy
-double ro_eff_gdy(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+double ro_eff_gdy(int local)
 {
 	double ro_g_dy = (HostArraysPtr.ro_g[local] * (1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local])
 					+ HostArraysPtr.ro_w[local] * HostArraysPtr.S_w[local]
@@ -250,7 +246,7 @@ double ro_eff_gdy(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
 // Служебные функции
 
 // Вывод запускаемой задачи
-void print_task_name(const consts &def)
+void print_task_name()
 {
 	// Нулевой процессор выводит название запускаемой задачи
 	if (!(def.rank))
@@ -264,77 +260,63 @@ void print_task_name(const consts &def)
 // Инициализация коммуникаций (1), перевод глобальных параметров в локальные процессора (2),
 // инициализация ускорителя (2.5), выделение памяти (3), загрузка начальных/сохраненных данных (4)
 // Для задачи Б-Л загрузка проницаемостей из файла.
-void initialization(ptr_Arrays* HostArraysPtr, ptr_Arrays* DevArraysPtr, long int* time_counter, int argc, char* argv[], consts* def)
+void initialization(long int* time_counter, int argc, char* argv[])
 {
-	FILE *f_save;
+	communication_initialization(argc, argv); // (1)
 
-	communication_initialization(argc, argv, def); // (1)
+	print_task_name();
 
-	print_task_name(*def);
+	sizes_initialization();
 
-	sizes_initialization(def);
+	blocks_initialization();
 
-	blocks_initialization(def);
+	global_to_local_vars(); // (2)
 
-	global_to_local_vars(def); // (2)
+	device_initialization(); // (2.5)
 
-	device_initialization(def); // (2.5)
+	memory_allocation(); // (3)
 
-	memory_allocation(HostArraysPtr, DevArraysPtr, *def); // (3)
+	load_permeability(HostArraysPtr.K); // (5)
+	load_data_to_device(HostArraysPtr.K, DevArraysPtr.K);
 
-	load_permeability((*HostArraysPtr).K, *def); // (5)
-	load_data_to_device((*HostArraysPtr).K, (*DevArraysPtr).K, *def);
+	data_initialization(time_counter);
 
-	// Если процессор может открыть файл сохраненного состояния,
-	// то восстанавливаем состояние, иначе применяем начальные условия
-	f_save = fopen("save/save.dat", "rb");
-	if (f_save)
-	{
-		fclose(f_save);
-		restore(*HostArraysPtr, time_counter, *def);
-	}
-	else
-	{
-		data_initialization(*HostArraysPtr, time_counter, *def);    // (4)
-	}
-
-	load_data_to_device((*HostArraysPtr).S_w, (*DevArraysPtr).S_w, *def);
-	load_data_to_device((*HostArraysPtr).roS_g_old, (*DevArraysPtr).roS_g_old, *def);
-	load_data_to_device((*HostArraysPtr).P_w, (*DevArraysPtr).P_w, *def);
-	load_data_to_device((*HostArraysPtr).S_n, (*DevArraysPtr).S_n, *def);
-	load_data_to_device((*HostArraysPtr).roS_w_old, (*DevArraysPtr).roS_w_old, *def);
-	load_data_to_device((*HostArraysPtr).roS_n_old, (*DevArraysPtr).roS_n_old, *def);
-	load_data_to_device((*HostArraysPtr).m, (*DevArraysPtr).m, *def);
-	load_data_to_device((*HostArraysPtr).K, (*DevArraysPtr).K, *def);
+	load_data_to_device(HostArraysPtr.S_w, DevArraysPtr.S_w);
+	load_data_to_device(HostArraysPtr.roS_g_old, DevArraysPtr.roS_g_old);
+	load_data_to_device(HostArraysPtr.P_w, DevArraysPtr.P_w);
+	load_data_to_device(HostArraysPtr.S_n, DevArraysPtr.S_n);
+	load_data_to_device(HostArraysPtr.roS_w_old, DevArraysPtr.roS_w_old);
+	load_data_to_device(HostArraysPtr.roS_n_old, DevArraysPtr.roS_n_old);
+	load_data_to_device(HostArraysPtr.m, DevArraysPtr.m);
+	load_data_to_device(HostArraysPtr.K, DevArraysPtr.K);
 #ifdef ENERGY
-	load_data_to_device((*HostArraysPtr).T, (*DevArraysPtr).T, *def);
+	load_data_to_device(HostArraysPtr.T, DevArraysPtr.T);
 #endif
 }
 
-// Завершение работы (1), освобождение памяти (2)
-void finalization(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* DevBuffer)
+void finalization()
 {
-	memory_free(HostArraysPtr, DevArraysPtr); // (2)
-	communication_finalization(); // (1)
-	device_finalization(); // (1)
+	memory_free();
+	communication_finalization();
+	device_finalization();
 }
 
 // Выделение памяти хоста (1) и ускорителя (2) под массив точек расчетной области
-void memory_allocation(ptr_Arrays* HostArraysPtr, ptr_Arrays* DevArraysPtr, const consts &def)
+void memory_allocation()
 {
-	host_memory_allocation(HostArraysPtr, def); // (1)
-	device_memory_allocation(DevArraysPtr, &DevBuffer, def); // (2)
+	host_memory_allocation(); // (1)
+	device_memory_allocation(); // (2)
 }
 
 // Освобожение памяти хоста (1) и ускорителя (2) из под массива точек расчетной области
-void memory_free(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr)
+void memory_free()
 {
-	host_memory_free(HostArraysPtr); // (1)
-	device_memory_free(DevArraysPtr, DevBuffer); // (2)
+	host_memory_free(); // (1)
+	device_memory_free(); // (2)
 }
 
 // Выделение памяти хоста под массив точек расчетной области
-void host_memory_allocation(ptr_Arrays* ArraysPtr, const consts &def)
+void host_memory_allocation()
 {
 	int buffer_size = 0;
 
@@ -359,43 +341,43 @@ void host_memory_allocation(ptr_Arrays* ArraysPtr, const consts &def)
 
 	try
 	{
-		(*ArraysPtr).S_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).S_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).P_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).P_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).ro_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).ro_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).ux_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).uy_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).uz_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).ux_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).uy_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).uz_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).Xi_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).Xi_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).roS_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).roS_w_old = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).roS_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).roS_n_old = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).m = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).K = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).P_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).S_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).ro_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).ux_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).uy_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).uz_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).Xi_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).roS_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).roS_g_old = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.S_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.S_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.P_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.P_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.ro_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.ro_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.ux_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.uy_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.uz_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.ux_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.uy_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.uz_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.Xi_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.Xi_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.roS_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.roS_w_old = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.roS_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.roS_n_old = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.m = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.K = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.P_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.S_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.ro_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.ux_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.uy_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.uz_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.Xi_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.roS_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.roS_g_old = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 #ifdef ENERGY
-		(*ArraysPtr).T = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).H_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).H_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).H_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).H_r = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).E = new double [(def.locNx) * (def.locNy) * (def.locNz)];
-		(*ArraysPtr).E_new = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.T = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.H_w = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.H_n = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.H_g = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.H_r = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.E = new double [(def.locNx) * (def.locNy) * (def.locNz)];
+		HostArraysPtr.E_new = new double [(def.locNx) * (def.locNy) * (def.locNz)];
 #endif
 	}
 	catch (...)
@@ -405,79 +387,79 @@ void host_memory_allocation(ptr_Arrays* ArraysPtr, const consts &def)
 }
 
 // Освобожение памяти хоста из под массива точек расчетной области
-void host_memory_free(const ptr_Arrays &ArraysPtr)
+void host_memory_free()
 {
 	delete HostBuffer;
-	delete[] ArraysPtr.S_n;
-	delete[] ArraysPtr.S_w;
-	delete[] ArraysPtr.P_w;
-	delete[] ArraysPtr.P_n;
-	delete[] ArraysPtr.ro_w;
-	delete[] ArraysPtr.ro_n;
-	delete[] ArraysPtr.ux_w;
-	delete[] ArraysPtr.uy_w;
-	delete[] ArraysPtr.uz_w;
-	delete[] ArraysPtr.ux_n;
-	delete[] ArraysPtr.uy_n;
-	delete[] ArraysPtr.uz_n;
-	delete[] ArraysPtr.Xi_w;
-	delete[] ArraysPtr.Xi_n;
-	delete[] ArraysPtr.roS_w;
-	delete[] ArraysPtr.roS_w_old;
-	delete[] ArraysPtr.roS_n;
-	delete[] ArraysPtr.roS_n_old;
-	delete[] ArraysPtr.m;
-	delete[] ArraysPtr.K;
-	delete[] ArraysPtr.P_g;
-	delete[] ArraysPtr.S_g;
-	delete[] ArraysPtr.ro_g;
-	delete[] ArraysPtr.ux_g;
-	delete[] ArraysPtr.uy_g;
-	delete[] ArraysPtr.uz_g;
-	delete[] ArraysPtr.Xi_g;
-	delete[] ArraysPtr.roS_g;
-	delete[] ArraysPtr.roS_g_old;
+	delete[] HostArraysPtr.S_n;
+	delete[] HostArraysPtr.S_w;
+	delete[] HostArraysPtr.P_w;
+	delete[] HostArraysPtr.P_n;
+	delete[] HostArraysPtr.ro_w;
+	delete[] HostArraysPtr.ro_n;
+	delete[] HostArraysPtr.ux_w;
+	delete[] HostArraysPtr.uy_w;
+	delete[] HostArraysPtr.uz_w;
+	delete[] HostArraysPtr.ux_n;
+	delete[] HostArraysPtr.uy_n;
+	delete[] HostArraysPtr.uz_n;
+	delete[] HostArraysPtr.Xi_w;
+	delete[] HostArraysPtr.Xi_n;
+	delete[] HostArraysPtr.roS_w;
+	delete[] HostArraysPtr.roS_w_old;
+	delete[] HostArraysPtr.roS_n;
+	delete[] HostArraysPtr.roS_n_old;
+	delete[] HostArraysPtr.m;
+	delete[] HostArraysPtr.K;
+	delete[] HostArraysPtr.P_g;
+	delete[] HostArraysPtr.S_g;
+	delete[] HostArraysPtr.ro_g;
+	delete[] HostArraysPtr.ux_g;
+	delete[] HostArraysPtr.uy_g;
+	delete[] HostArraysPtr.uz_g;
+	delete[] HostArraysPtr.Xi_g;
+	delete[] HostArraysPtr.roS_g;
+	delete[] HostArraysPtr.roS_g_old;
 #ifdef ENERGY
-	delete[] ArraysPtr.T;
-	delete[] ArraysPtr.H_w;
-	delete[] ArraysPtr.H_n;
-	delete[] ArraysPtr.H_g;
-	delete[] ArraysPtr.H_r;
-	delete[] ArraysPtr.E;
-	delete[] ArraysPtr.E_new;
+	delete[] HostArraysPtr.T;
+	delete[] HostArraysPtr.H_w;
+	delete[] HostArraysPtr.H_n;
+	delete[] HostArraysPtr.H_g;
+	delete[] HostArraysPtr.H_r;
+	delete[] HostArraysPtr.E;
+	delete[] HostArraysPtr.E_new;
 #endif
 }
 
 // Функция сохранения графиков в файлы
-void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def)
+void save_data_plots(double t)
 {
 	// Загрузка в память хоста результатов расчета
-	load_data_to_host(HostArraysPtr.S_w, DevArraysPtr.S_w , def);
-	load_data_to_host(HostArraysPtr.ux_w, DevArraysPtr.ux_w , def);
-	load_data_to_host(HostArraysPtr.uy_w, DevArraysPtr.uy_w , def);
-	load_data_to_host(HostArraysPtr.uz_w, DevArraysPtr.uz_w , def);
-	load_data_to_host(HostArraysPtr.ux_g, DevArraysPtr.ux_g , def);
-	load_data_to_host(HostArraysPtr.uy_g, DevArraysPtr.uy_g , def);
-	load_data_to_host(HostArraysPtr.uz_g, DevArraysPtr.uz_g , def);
-	load_data_to_host(HostArraysPtr.P_w, DevArraysPtr.P_w , def);
-	load_data_to_host(HostArraysPtr.S_n, DevArraysPtr.S_n , def);
-	load_data_to_host(HostArraysPtr.S_g, DevArraysPtr.S_g , def);
-	load_data_to_host(HostArraysPtr.ux_n, DevArraysPtr.ux_n , def);
-	load_data_to_host(HostArraysPtr.uy_n, DevArraysPtr.uy_n , def);
-	load_data_to_host(HostArraysPtr.uz_n, DevArraysPtr.uz_n , def);
+	load_data_to_host(HostArraysPtr.S_w, DevArraysPtr.S_w);
+	load_data_to_host(HostArraysPtr.ux_w, DevArraysPtr.ux_w);
+	load_data_to_host(HostArraysPtr.uy_w, DevArraysPtr.uy_w);
+	load_data_to_host(HostArraysPtr.uz_w, DevArraysPtr.uz_w);
+	load_data_to_host(HostArraysPtr.ux_g, DevArraysPtr.ux_g);
+	load_data_to_host(HostArraysPtr.uy_g, DevArraysPtr.uy_g);
+	load_data_to_host(HostArraysPtr.uz_g, DevArraysPtr.uz_g);
+	load_data_to_host(HostArraysPtr.P_w, DevArraysPtr.P_w);
+	load_data_to_host(HostArraysPtr.S_n, DevArraysPtr.S_n);
+	load_data_to_host(HostArraysPtr.S_g, DevArraysPtr.S_g);
+	load_data_to_host(HostArraysPtr.ux_n, DevArraysPtr.ux_n);
+	load_data_to_host(HostArraysPtr.uy_n, DevArraysPtr.uy_n);
+	load_data_to_host(HostArraysPtr.uz_n, DevArraysPtr.uz_n);
 #ifdef ENERGY
-	load_data_to_host(HostArraysPtr.T, DevArraysPtr.T, def);
+	load_data_to_host(HostArraysPtr.T, DevArraysPtr.T);
 #endif
 
 	// Проверка на выход из допустимого диапазона значений P и S
 #ifdef MY_TEST
-	test_correct_P_S(HostArraysPtr, def);
+	test_correct_P_S();
 #endif
 
 	// Нулевой процессор создает директории, файлы и прописывает заголовки файлов
 	if ((def.rank) == 0)
 	{
-		print_plots_top(t, def);
+		print_plots_top(t);
 	}
 
 	if((def.sizey == 1) && (def.sizez == 1))
@@ -490,7 +472,7 @@ void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 			barrier();
 			if ((def.rank) == cpu)
 			{
-				print_plots(HostArraysPtr, t, def, -1, -1);
+				print_plots(t, -1, -1);
 			}
 		}
 	} 
@@ -508,7 +490,7 @@ void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 							barrier();
 							if ((def.rank) == cpux + cpuy * (def.sizex) + cpuz * (def.sizex) * (def.sizey) && i < def.locNx && j < def.locNy)
 							{
-								print_plots(HostArraysPtr, t, def, i, j);
+								print_plots(t, i, j);
 							}
 						}
 	}
@@ -516,7 +498,7 @@ void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArray
 }
 
 // Функция создания директорий, файлов для графиков и сохранения заголовков в них
-void print_plots_top(double t, const consts &def)
+void print_plots_top(double t)
 {
 	char fname[64];
 	FILE *fp;
@@ -577,7 +559,7 @@ void print_plots_top(double t, const consts &def)
 // Функция сохранения данных в файлы графиков
 // Если деления между процессорами по y, z нет, то параметры I, J не используются. 
 // Если же есть, но хочется писать в файл в простой последовательности, то должно быть I=J=-1
-void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, int I, int J)
+void print_plots(double t, int I, int J)
 {
 	char fname[64];
 	FILE *fp;
@@ -594,13 +576,13 @@ void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, i
 			for (int j = 0; j < def.locNy; j++)
 				for (int k = 0; k < def.locNz; k++)
 					if (ACTIVE_POINT)
-						print_plot_row(HostArraysPtr, fp, i, j, k, def);
+						print_plot_row(fp, i, j, k);
 	}
 	else
 	{
 		for (int k = 0; k < def.locNz; k++)
-			if (is_active_point(I, J, k, def))
-				print_plot_row(HostArraysPtr, fp, I, J, k, def);
+			if (is_active_point(I, J, k))
+				print_plot_row(fp, I, J, k);
 	}
 
 	fclose(fp);
@@ -612,14 +594,14 @@ void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, i
 // 2. Распределение давлений воды P_w
 // 3. Распределение скоростей {u_x, u_y, u_z}
 // 4. Распределение типов грунтов
-void print_plot_row(const ptr_Arrays &HostArraysPtr, FILE* fp, int i, int j, int k, const consts &def)
+void print_plot_row(FILE* fp, int i, int j, int k)
 {
 	int local = i + j * def.locNx + k * def.locNx * def.locNy;
 
 	// Преобразование локальных координат процессора к глобальным
-	int I = local_to_global(i, 'x', def);
-	int J = def.Ny - 1 - local_to_global(j, 'y', def);
-	int K = local_to_global(k, 'z', def); 
+	int I = local_to_global(i, 'x');
+	int J = def.Ny - 1 - local_to_global(j, 'y');
+	int K = local_to_global(k, 'z');
 
 	if (def.Nz < 2)
 	{
@@ -678,7 +660,7 @@ void print_plot_row(const ptr_Arrays &HostArraysPtr, FILE* fp, int i, int j, int
 }
 
 // Функция вывода на экран двумерного массива(для тестирования пересылок)
-void print_array_console(double* Arr, const consts &def, char axis)
+void print_array_console(double* Arr, char axis)
 {
 	printf("\n");
 	switch(axis)
@@ -738,157 +720,18 @@ void print_array_console(double* Arr, const consts &def, char axis)
 }
 
 // Функция загрузки файла проницаемостей
-void load_permeability(double* K, const consts &def)
+void load_permeability(double* K)
 {
 	for (int i = 0; i < def.locNx; i++)
 		for (int j = 0; j < def.locNy; j++)
-			for (int k = 0; k < def.locNz; k++)
+			for (int k = 0; k < def.locNz; k++) {
 				K[i + j * def.locNx + k * def.locNx * def.locNy] = def.K[0];
-
-	for (int i = 0; i < def.locNx; i++)
-		for (int j = 0; j < def.locNy; j++)
-			for (int k = 0; k < def.locNz; k++)
 				test_positive(K[i+j*def.locNx+k*def.locNx*def.locNy], __FILE__, __LINE__);
-}
-
-// Сохранение состояния в файл
-void save(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, long int time_counter, const consts &def)
-{
-	load_data_to_host(HostArraysPtr.roS_w_old, DevArraysPtr.roS_w_old , def);
-	load_data_to_host(HostArraysPtr.roS_n_old, DevArraysPtr.roS_n_old , def);
-	load_data_to_host(HostArraysPtr.roS_g_old, DevArraysPtr.roS_n_old , def);
-
-	FILE *f_save;
-
-	if ((def.rank) == 0)
-	{
-
-#ifdef _WIN32
-		_mkdir("save");
-#else
-		mkdir("save", 0000777);
-#endif
-
-		if (!(f_save = fopen("save/save.dat", "wb")))
-		{
-			printf("\nError: Not open file \"save.dat\"!\n");
-			exit(0);
-		}
-		fclose(f_save);
-	}
-
-	for (int cpu = 0; cpu < (def.sizex * (def.sizey) * (def.sizez)); cpu++)
-	{
-		// Реализация фунции Barrier для различных коммуникаций
-		barrier();
-		if ((def.rank) == cpu)
-		{
-			if (!(f_save = fopen("save/save.dat", "ab")))
-				print_error("Not open file \"save.dat\"", __FILE__, __LINE__);
-
-			fwrite(&time_counter, sizeof(int), 1, f_save);
-			fwrite(HostArraysPtr.S_w, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			fwrite(HostArraysPtr.P_w, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			fwrite(HostArraysPtr.S_n, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			fwrite(HostArraysPtr.roS_w_old, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			fwrite(HostArraysPtr.roS_n_old, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			fwrite(HostArraysPtr.roS_g_old, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			fwrite(HostArraysPtr.m, sizeof(double), (def.locNx) * (def.locNy) * (def.locNz), f_save);
-			fclose(f_save);
-		}
-	}
-}
-
-// Восстановление состояния из файла
-void restore(const ptr_Arrays &HostArraysPtr, long int* time_counter, const consts &def)
-{
-	FILE *f_save;
-	for (int cpu = 0; cpu < (def.sizex * (def.sizey) * (def.sizez)); cpu++)
-	{
-		// Реализация фунции Barrier для различных коммуникаций
-		barrier();
-
-		consts def_tmp;
-		def_tmp.locNx = 0;
-		def_tmp.locNy = 0;
-		def_tmp.locNz = 0;
-		def_tmp.Nx = def.Nx;
-		def_tmp.Ny = def.Ny;
-		def_tmp.Nz = def.Nz;
-		def_tmp.size = def.size;
-		def_tmp.sizex = def.sizex;
-		def_tmp.sizey = def.sizey;
-		def_tmp.sizez = def.sizez;
-
-		if ((def.rank) == cpu)
-		{
-			if (!(f_save = fopen("save/save.dat", "rb")))
-				print_error("Not open file \"save.dat\"", __FILE__, __LINE__);
-
-			for (int queue = 0; queue <= (def.rank); queue++)
-			{
-				def_tmp.rank = queue;
-				global_to_local_vars(&def_tmp);
-				fread(time_counter, sizeof(int), 1, f_save);
-				fread(HostArraysPtr.S_w, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				fread(HostArraysPtr.P_w, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				fread(HostArraysPtr.S_n, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				fread(HostArraysPtr.roS_w_old, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				fread(HostArraysPtr.roS_n_old, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				fread(HostArraysPtr.roS_g_old, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
-				fread(HostArraysPtr.m, sizeof(double), (def_tmp.locNx) * (def_tmp.locNy) * (def_tmp.locNy), f_save);
 			}
-			fclose(f_save);
-		}
-	}
-}
-
-
-
-//------------------------------------------------------------------------------------------
-
-// Масштабирование размерностей входных данных
-void resize_defines(consts* def, double l, double t)
-{
-	// h_i - максимум из hx, hy, hz
-	double h_i = max(def->hx, def->hy);
-	if (def->Nz > 1)
-		h_i = max(h_i, def->hz);
-
-	l=l/h_i;
-	t=t/def->dt;
-	double m=1.;
-
-	def->upscale_l=l;
-	def->upscale_t=t;
-
-	def->dt *= t;
-	def->hx *= l;
-	def->hy *= l;
-	def->hz *= l;
-	def->P_atm *= m/(l*l);
-	def->beta_w *= (l*l)/m;
-	def->beta_n *= (l*l)/m;
-	def->g_const *= l/(t*t);
-	def->K[0] *= l*l;
-	def->mu_w *= m*t/(l*l);
-	def->mu_n *= m*t/(l*l);
-	def->ro0_n *= m/(pow(l,3));
-	def->ro0_w *= m/(pow(l,3));
-	def->l *= l;
-	def->c_n *= l/t;
-	def->c_w *= l/t;
-	def->tau *= t;
-	def->timeX *= t;
-
-	def->beta_g *= (l*l)/m;
-	def->ro0_g *= m/(pow(l,3));
-	def->c_g *= l/t;
-	def->mu_g *= m*t/(l*l);
 }
 
 // Считывание параметров задачи из файла
-void read_defines(int argc, char *argv[], consts* def)
+void read_defines(int argc, char *argv[])
 {
 	FILE *defs;
 	char str[250] = "", attr_name[50] = "", attr_value[50] = "";
@@ -944,192 +787,192 @@ void read_defines(int argc, char *argv[], consts* def)
 
 		if (!strcmp(attr_name, "NX"))
 		{
-			def->Nx = atoi(attr_value);
+			def.Nx = atoi(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "NY"))
 		{
-			def->Ny = atoi(attr_value);
+			def.Ny = atoi(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "NZ"))
 		{
-			def->Nz = atoi(attr_value);
+			def.Nz = atoi(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "TAU"))
 		{
-			def->tau = atof(attr_value);
+			def.tau = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "DT"))
 		{
-			def->dt = atof(attr_value);
+			def.dt = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "C_W"))
 		{
-			def->c_w = atof(attr_value);
+			def.c_w = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "C_N"))
 		{
-			def->c_n = atof(attr_value);
+			def.c_n = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "L"))
 		{
-			def->l = atof(attr_value);
+			def.l = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "BETA_W"))
 		{
-			def->beta_w = atof(attr_value);
+			def.beta_w = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "BETA_N"))
 		{
-			def->beta_n = atof(attr_value);
+			def.beta_n = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "RO_W"))
 		{
-			def->ro0_w = atof(attr_value);
+			def.ro0_w = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "RO_N"))
 		{
-			def->ro0_n = atof(attr_value);
+			def.ro0_n = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "MU_W"))
 		{
-			def->mu_w = atof(attr_value);
+			def.mu_w = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "MU_N"))
 		{
-			def->mu_n = atof(attr_value);
+			def.mu_n = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "G_CONST"))
 		{
-			def->g_const = atof(attr_value);
+			def.g_const = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "P_ATM"))
 		{
-			def->P_atm = atof(attr_value);
+			def.P_atm = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "LAMBDA_0"))
 		{
-			def->lambda[0] = atof(attr_value);
+			def.lambda[0] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "M_0"))
 		{
-			def->porosity[0] = atof(attr_value);
+			def.porosity[0] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_WR_0"))
 		{
-			def->S_wr[0] = atof(attr_value);
+			def.S_wr[0] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "K_0"))
 		{
-			def->K[0] = atof(attr_value);
+			def.K[0] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "C_G"))
 		{
-			def->c_g = atof(attr_value);
+			def.c_g = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "BETA_G"))
 		{
-			def->beta_g = atof(attr_value);
+			def.beta_g = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "RO_G"))
 		{
-			def->ro0_g = atof(attr_value);
+			def.ro0_g = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "MU_G"))
 		{
-			def->mu_g = atof(attr_value);
+			def.mu_g = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "P_D_NW_0"))
 		{
-			def->P_d_nw[0] = atof(attr_value);
+			def.P_d_nw[0] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "P_D_GN_0"))
 		{
-			def->P_d_gn[0] = atof(attr_value);
+			def.P_d_gn[0] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_W_GR"))
 		{
-			def->S_w_gr = atof(attr_value);
+			def.S_w_gr = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_W_INIT"))
 		{
-			def->S_w_init = atof(attr_value);
+			def.S_w_init = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_N_INIT"))
 		{
-			def->S_n_init = atof(attr_value);
+			def.S_n_init = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_NR_0"))
 		{
-			def->S_nr[0] = atof(attr_value);
+			def.S_nr[0] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_GR_0"))
 		{
-			def->S_gr[0] = atof(attr_value);
+			def.S_gr[0] = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "S_N_GR"))
 		{
-			def->S_n_gr = atof(attr_value);
+			def.S_n_gr = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "SOURCE"))
 		{
-			def->source = atoi(attr_value);
+			def.source = atoi(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "ITERATIONS"))
 		{
-			def->newton_iterations = atoi(attr_value);
+			def.newton_iterations = atoi(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "TIMEX"))
 		{
-			def->timeX = atof(attr_value);
+			def.timeX = atof(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "SAVE_PLOTS"))
 		{
-			def->save_plots = atoi(attr_value);
+			def.save_plots = atoi(attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "PLOTS_DIR"))
 		{
-			strcpy(def->plots_dir, attr_value);
+			strcpy(def.plots_dir, attr_value);
 			continue;
 		}
 		if (!strcmp(attr_name, "PRINT_SCREEN"))
 		{
-			def->print_screen = atoi(attr_value);
+			def.print_screen = atoi(attr_value);
 			continue;
 		}
 	}
@@ -1137,29 +980,26 @@ void read_defines(int argc, char *argv[], consts* def)
 	fclose(defs);
 
 	// Determine hx, hy, hz from Nx, Ny, Nz
-	def->hx = 1.0 / (max((double)def->Nx - 1, 1));
-	def->hy = 1.0 / (max((double)def->Ny - 1, 1));
-	def->hz = 1.0 / (max((double)def->Nz - 1, 1));
+	def.hx = 1.0 / (my_max((double)def.Nx - 1, 1));
+	def.hy = 1.0 / (my_max((double)def.Ny - 1, 1));
+	def.hz = 1.0 / (my_max((double)def.Nz - 1, 1));
 
 	// Если нет масштабирования, то 1
-	def->upscale_l=1;
-	def->upscale_t=1;
+	def.upscale_l=1;
+	def.upscale_t=1;
 
-	read_defines_test(*def);
-
-	//resize_defines(def, 0.15, 0.01);
-	//read_defines_test(*def);
+	read_defines_test();
 }
 
 // Вывод на экран распределения процессоров в системе и области по процессорам
-void print_hosts_configuration(const consts &def) {
+void print_hosts_configuration() {
 	printf("\n  size = %d : (%d, %d, %d)\n  rank = %d : (%d, %d, %d)\n  locN = %d : (%d, %d, %d)\n", 
-		 (def).size, (def).sizex, (def).sizey, (def).sizez,
-		 (def).rank, (def).rankx, (def).ranky, (def).rankz, 
-		 (def).locNx * (def).locNy * (def).locNz, (def).locNx, (def).locNy, (def).locNz);
+		 def.size, def.sizex, def.sizey, def.sizez,
+		 def.rank, def.rankx, def.ranky, def.rankz,
+		 def.locNx * def.locNy * def.locNz, def.locNx, def.locNy, def.locNz);
 }
 
-static void S_local_initialization(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+static void S_local_initialization(int local)
 {
 	HostArraysPtr.S_w[local] = def.S_w_init;
 	HostArraysPtr.S_n[local] = def.S_n_init;
@@ -1168,7 +1008,7 @@ static void S_local_initialization(const ptr_Arrays &HostArraysPtr, int local, c
 //	HostArraysPtr.S_n[local] = def.S_n_init + 0.1 * sin((double)local) - 0.1 / (local + 1.) - 0.1 * exp(-0.005 * local);;
 }
 
-void data_initialization(const ptr_Arrays &HostArraysPtr, long int* t, const consts &def)
+void data_initialization(long int* t)
 {
 	*t = 0;
 	for (int i = 0; i < def.locNx; i++)
@@ -1178,7 +1018,7 @@ void data_initialization(const ptr_Arrays &HostArraysPtr, long int* t, const con
 				int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 
 				HostArraysPtr.m[local]=def.porosity[0];
-				S_local_initialization(HostArraysPtr, local, def);
+				S_local_initialization(local);
 
 				/*if ((j == 0) && ((def.source) > 0))
 				{

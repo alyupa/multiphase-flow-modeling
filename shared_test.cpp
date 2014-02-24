@@ -18,7 +18,7 @@ void print_error(const char *error, const char *file, int line)
 // Функция проверки на выход из допустимого диапазона значений
 // во всех точках расчетной области процессора
 
-void test_correct_P_S(const ptr_Arrays &HostArraysPtr, const consts &def)
+void test_correct_P_S()
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
@@ -135,23 +135,8 @@ void test_arrowhead(double big, double small, const char *file, int line)
 #endif
 }
 
-// Функция проверяет, что первое слагаемое уравнения неразрывности много больше (по модулю) второго
-// Если это не так, печатается предупреждение
-void test_tau(double S_old, double S_now, double S_new, int local, const consts &def, const char *file, int line)
-{
-#ifdef MY_TEST_1
-	double L = HostArraysPtr.m[local] * (S_new - S_old) / (2 * (def.dt));
-	double R = def.tau * (S_new - 2 * S_now + S_old) / ((def.dt) * (def.dt));
-
-	if (fabs(L / 30) < fabs(R))
-	{
-		printf("Warning: parameter tau is very much.\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
-	}
-#endif
-}
-
 // Тест на корректность параметров задачи
-void read_defines_test(const consts &def)
+void read_defines_test()
 {
 #ifdef MY_TEST
 	test_positive(def.hx, __FILE__, __LINE__);

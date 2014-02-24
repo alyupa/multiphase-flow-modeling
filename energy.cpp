@@ -1,5 +1,7 @@
 #include "defines.h"
 
+extern consts def;
+
 // !!! Нужно потом будет вынести в структуру констант
 // Базовая температура
 double T_0 = 273.; // К
@@ -29,59 +31,59 @@ double alfa_n = 9.2E-7;
 
 
 // Коэффициенты удельных теплоемкостей при постоянном давлении  для water, napl, gas and rock в Вт/(м*К)
-double c_w (double T, const consts &def)
+static inline double c_w (double T)
 {
 	return c0_w - C_w * (T - T_0) + C_w2 * (T - T_0) * (T - T_0);
 }
 
-double c_n (double T, const consts &def)
+static inline double c_n (double T)
 {
 	return c0_n + C_n * (T - T_0);
 }
 
-double c_g (double T, const consts &def)
+static inline double c_g (double T)
 {
 	return c0_g + C_g * (T - T_0);
 }
 
-double c_r (double T, const consts &def)
+static inline double c_r (double T)
 {
 	return c0_r + C_r * (T - T_0);
 }
 
 // Коэффициенты теплопроводности для water, napl, gas and rock
-double lambda_w (double T, const consts &def)
+static inline double lambda_w (double T)
 {
 	return lambda0_w * (1 - lambdaA_w * (T - T_0));
 }
 
-double lambda_n (double T, const consts &def)
+static inline double lambda_n (double T)
 {
 	return lambda0_n * (1 - lambdaA_n * (T - T_0));
 }
 
-double lambda_g (double T, const consts &def)
+static inline double lambda_g (double T)
 {
 	return lambda0_g * pow((T / T_0), lambdaA_g);
 }
 
-double lambda_r (double T, const consts &def)
+static inline double lambda_r (double T)
 {
 	return lambda0_r;
 }
 
 // Эффективный коэффициент теплопроводности в точке (будет использоваться при расчете теплового потока)
-double assign_lambda_eff (const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+static inline double assign_lambda_eff (int local)
 {
-	return HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * lambda_w (HostArraysPtr.T[local], def)
-		+ HostArraysPtr.S_n[local] * lambda_n (HostArraysPtr.T[local], def)
-		+ HostArraysPtr.S_g[local] * lambda_g (HostArraysPtr.T[local], def)) 
-		+ (1. - HostArraysPtr.m[local]) * lambda_r (HostArraysPtr.T[local], def);
+	return HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * lambda_w (HostArraysPtr.T[local])
+		+ HostArraysPtr.S_n[local] * lambda_n (HostArraysPtr.T[local])
+		+ HostArraysPtr.S_g[local] * lambda_g (HostArraysPtr.T[local]))
+		+ (1. - HostArraysPtr.m[local]) * lambda_r (HostArraysPtr.T[local]);
 }
 
 // Расчет энтальпии по температуре и теплоемкости
 // !!! Переписать, задав точность для метода Симпсона и передавая указатель на функцию, чтобы не копировать одно и то же
-double assign_H_w (double T, const consts &def)
+static inline double assign_H_w (double T)
 {
 	/* Возможно, что Симпсон понадобиться позже, а пока все равно нужно знать явную зависимость энергии от температуры
 	double integral = 0, sum = 0, h_temp;
@@ -90,18 +92,18 @@ double assign_H_w (double T, const consts &def)
 	h_temp = (T - T_0) / N_temp;
 	
 	integral += (def.P_atm / def.ro0_w);
-	integral += с_w(T_0, def);
-	integral += с_w(T, def);
+	integral += с_w(T_0);
+	integral += с_w(T);
 
 	for(int i = 2; i < N_temp; i+=2)
-		sum += с_w(T_0 + i * h_temp, def);
+		sum += с_w(T_0 + i * h_temp);
 
 	sum *= 2;
 	integral += sum;
 	sum = 0;
 
 	for(int i = 1; i < N_temp; i+=2)
-		sum += с_w(T_0 + i * h_temp, def);
+		sum += с_w(T_0 + i * h_temp);
 
 	sum *= 4;
 	integral += sum;
@@ -114,27 +116,27 @@ double assign_H_w (double T, const consts &def)
 	return (def.P_atm / def.ro0_w) + (T - T_0) * (c0_w - (T - T_0) * (C_w / 2 + C_w2 * (T - T_0) / 3));
 }
 
-double assign_H_n (double T, const consts &def)
+static inline double assign_H_n (double T)
 {
 	return (def.P_atm / def.ro0_n) + (T - T_0) * (c0_n + C_n * (T - T_0) / 2);
 }
 
-double assign_H_g (double T, const consts &def)
+static inline double assign_H_g (double T)
 {
 	return (def.P_atm / def.ro0_g) + (T - T_0) * (c0_g + C_g * (T - T_0) / 2);
 }
 
-double assign_H_r (double T, const consts &def)
+static inline double assign_H_r (double T)
 {
 	return (def.P_atm / ro_r) + (T - T_0) * (c0_r + C_r * (T - T_0) / 2);
 }
 
-void assign_H (const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+void assign_H (int local)
 {
-	HostArraysPtr.H_w[local] = assign_H_w (HostArraysPtr.T[local], def);
-	HostArraysPtr.H_n[local] = assign_H_n (HostArraysPtr.T[local], def);
-	HostArraysPtr.H_g[local] = assign_H_g (HostArraysPtr.T[local], def);
-	HostArraysPtr.H_r[local] = assign_H_r (HostArraysPtr.T[local], def);
+	HostArraysPtr.H_w[local] = assign_H_w (HostArraysPtr.T[local]);
+	HostArraysPtr.H_n[local] = assign_H_n (HostArraysPtr.T[local]);
+	HostArraysPtr.H_g[local] = assign_H_g (HostArraysPtr.T[local]);
+	HostArraysPtr.H_r[local] = assign_H_r (HostArraysPtr.T[local]);
 
 	test_nan(HostArraysPtr.H_w[local], __FILE__, __LINE__);
 	test_nan(HostArraysPtr.H_n[local], __FILE__, __LINE__);
@@ -143,7 +145,7 @@ void assign_H (const ptr_Arrays &HostArraysPtr, int local, const consts &def)
 }
 
 // Возвращает значение плотности в точке фазы phase как функции от P, T
-double ro(double P, double T, char phase, const consts &def)
+static inline double ro(double P, double T, char phase)
 {
 	double result_ro;
 	switch (phase)
@@ -170,7 +172,7 @@ double ro(double P, double T, char phase, const consts &def)
 }
 
 // Возвращает значение частной производной плотности в точке фазы phase по переменной var
-double d_ro(double P, double T, char phase, char var, const consts &def)
+static inline double d_ro(double P, double T, char phase, char var)
 {
 	double result_d_ro = 0;
 	switch (phase)
@@ -232,7 +234,7 @@ double d_ro(double P, double T, char phase, char var, const consts &def)
 // Коэффициенты вязкости для water, napl, gas and rock
 
 // Расчет теплового потока в точке
-double assign_T_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+static double assign_T_flow (int i, int j, int k)
 {	
 	if (INTERNAL_POINT)
 	{
@@ -241,22 +243,22 @@ double assign_T_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, cons
 
 		if ((def.locNx) > 2)
 		{
-			T_flow += (assign_lambda_eff(HostArraysPtr, local + 1, def) * HostArraysPtr.T[local + 1]
-			- 2 * assign_lambda_eff(HostArraysPtr, local, def) * HostArraysPtr.T[local]
-			+ assign_lambda_eff(HostArraysPtr, local - 1, def) * HostArraysPtr.T[local - 1]) / ((def.hx) * (def.hx));
+			T_flow += (assign_lambda_eff(local + 1) * HostArraysPtr.T[local + 1]
+			- 2 * assign_lambda_eff(local) * HostArraysPtr.T[local]
+			+ assign_lambda_eff(local - 1) * HostArraysPtr.T[local - 1]) / ((def.hx) * (def.hx));
 		}
 		if ((def.locNy) > 2)
 		{
-			T_flow += (assign_lambda_eff(HostArraysPtr, local + def.locNx, def) * HostArraysPtr.T[local + def.locNx]
-			- 2 * assign_lambda_eff(HostArraysPtr, local, def) * HostArraysPtr.T[local]
-			+ assign_lambda_eff(HostArraysPtr, local - def.locNx, def) * HostArraysPtr.T[local - def.locNx]) / ((def.hy) * (def.hy));
+			T_flow += (assign_lambda_eff(local + def.locNx) * HostArraysPtr.T[local + def.locNx]
+			- 2 * assign_lambda_eff(local) * HostArraysPtr.T[local]
+			+ assign_lambda_eff(local - def.locNx) * HostArraysPtr.T[local - def.locNx]) / ((def.hy) * (def.hy));
 		}
 
 		if ((def.locNz) > 2)
 		{
-			T_flow = (assign_lambda_eff(HostArraysPtr, local + (def.locNx) * (def.locNy), def) * HostArraysPtr.T[local + (def.locNx) * (def.locNy)]
-			- 2 * assign_lambda_eff(HostArraysPtr, local, def) * HostArraysPtr.T[local]
-			+ assign_lambda_eff(HostArraysPtr, local - (def.locNx) * (def.locNy), def) * HostArraysPtr.T[local - (def.locNx) * (def.locNy)]) / ((def.hz) * (def.hz));
+			T_flow = (assign_lambda_eff(local + (def.locNx) * (def.locNy)) * HostArraysPtr.T[local + (def.locNx) * (def.locNy)]
+			- 2 * assign_lambda_eff(local) * HostArraysPtr.T[local]
+			+ assign_lambda_eff(local - (def.locNx) * (def.locNy)) * HostArraysPtr.T[local - (def.locNx) * (def.locNy)]) / ((def.hz) * (def.hz));
 		}
 
 		test_u(T_flow, __FILE__, __LINE__);
@@ -267,7 +269,7 @@ double assign_T_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, cons
 }
 
 // Расчет потока энергии в точке
-double assign_E_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k,  const consts &def)
+static double assign_E_flow (int i, int j, int k)
 {
 	if (INTERNAL_POINT)
 	{
@@ -314,7 +316,7 @@ double assign_E_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k,  con
 }
 
 // Расчет внутренней энергии всей системы в точке
-void assign_E_current (const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+void assign_E_current (int local)
 {
 	HostArraysPtr.E[local] = (HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (HostArraysPtr.ro_w[local] * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local])
 		+ HostArraysPtr.S_n[local] * (HostArraysPtr.ro_n[local] * HostArraysPtr.H_n[local] - HostArraysPtr.P_n[local])
@@ -325,7 +327,7 @@ void assign_E_current (const ptr_Arrays &HostArraysPtr, int local, const consts 
 }
 
 // Расчет внутренней энергии всей системы в точке на следующем шаге по времени
-void assign_E_new (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void assign_E_new (int i, int j, int k)
 {
 	if (INTERNAL_POINT)
 	{
@@ -333,18 +335,18 @@ void assign_E_new (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const c
 
 		int local=i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 
-		HostArraysPtr.E_new[local] = HostArraysPtr.E[local] + (def.dt) * (assign_T_flow(HostArraysPtr, i, j, k, def) + Q_hw + Q_hr - assign_E_flow(HostArraysPtr, i, j, k, def));
+		HostArraysPtr.E_new[local] = HostArraysPtr.E[local] + (def.dt) * (assign_T_flow(i, j, k) + Q_hw + Q_hr - assign_E_flow(i, j, k));
 
 		test_nan(HostArraysPtr.E_new[local], __FILE__, __LINE__);
 	}
 }
 
 // Задание граничных условий на температуру
-void Border_T(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void Border_T(int i, int j, int k)
 {
 	if (BOUNDARY_POINT)
 	{
-		int local1 = set_boundary_basic_coordinate(i, j, k, def);
+		int local1 = set_boundary_basic_coordinate(i, j, k);
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 
 		if (j == 0)
@@ -367,7 +369,7 @@ void Border_T(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 
 // Расчет методом Ньютона значений переменных на новом шаге по времени, когда учитываем изменение энергии (случай 4х переменных)
 // !!! Пока "выбросим" капиллярные давления
-void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void Newton(int i, int j, int k)
 {
 	if (INTERNAL_POINT)
 	{
@@ -385,12 +387,12 @@ void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &
 		for (int w = 1; w <= def.newton_iterations; w++)
 		{
 			F[0] = HostArraysPtr.S_g[local] + HostArraysPtr.S_w[local] + HostArraysPtr.S_n[local] - 1.;
-			F[1] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def) * HostArraysPtr.S_w[local] - HostArraysPtr.roS_w[local];
-			F[2] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def) * HostArraysPtr.S_n[local] - HostArraysPtr.roS_n[local];
-			F[3] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def) * HostArraysPtr.S_g[local] - HostArraysPtr.roS_g[local];
-			F[4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def) * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local])
-				+ HostArraysPtr.S_n[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def) * HostArraysPtr.H_n[local] - HostArraysPtr.P_w[local])
-				+ HostArraysPtr.S_g[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def) * HostArraysPtr.H_g[local] - HostArraysPtr.P_w[local])) 
+			F[1] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w') * HostArraysPtr.S_w[local] - HostArraysPtr.roS_w[local];
+			F[2] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n') * HostArraysPtr.S_n[local] - HostArraysPtr.roS_n[local];
+			F[3] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g') * HostArraysPtr.S_g[local] - HostArraysPtr.roS_g[local];
+			F[4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w') * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local])
+				+ HostArraysPtr.S_n[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n') * HostArraysPtr.H_n[local] - HostArraysPtr.P_w[local])
+				+ HostArraysPtr.S_g[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g') * HostArraysPtr.H_g[local] - HostArraysPtr.P_w[local]))
 				+ (1. - HostArraysPtr.m[local]) * (ro_r * HostArraysPtr.H_r[local] - HostArraysPtr.P_w[local]) 
 				- HostArraysPtr.E_new[local];
 
@@ -402,38 +404,38 @@ void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &
 			dF[3] = 0.;
 			dF[4] = 0.;
 
-			dF[0 + n] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def);
+			dF[0 + n] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w');
 			dF[1 + n] = 0.;
 			dF[2 + n] = 0.;
-			dF[3 + n] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'P', def) * HostArraysPtr.S_w[local];
-			dF[4 + n] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'T', def) * HostArraysPtr.S_w[local];
+			dF[3 + n] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'P') * HostArraysPtr.S_w[local];
+			dF[4 + n] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'T') * HostArraysPtr.S_w[local];
 
 			dF[0 + n * 2] = 0.;
-			dF[1 + n * 2] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def);
+			dF[1 + n * 2] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n');
 			dF[2 + n * 2] = 0.;
-			dF[3 + n * 2] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'P', def) * HostArraysPtr.S_n[local];
-			dF[4 + n * 2] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'T', def) * HostArraysPtr.S_n[local];
+			dF[3 + n * 2] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'P') * HostArraysPtr.S_n[local];
+			dF[4 + n * 2] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'T') * HostArraysPtr.S_n[local];
 
 			dF[0 + n * 3] = 0.;
 			dF[1 + n * 3] = 0.;
-			dF[2 + n * 3] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def);
-			dF[3 + n * 3] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'P', def) * HostArraysPtr.S_g[local];
-			dF[4 + n * 3] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T', def) * HostArraysPtr.S_g[local];
+			dF[2 + n * 3] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g');
+			dF[3 + n * 3] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'P') * HostArraysPtr.S_g[local];
+			dF[4 + n * 3] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T') * HostArraysPtr.S_g[local];
 
-			dF[0 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def) * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local]);
-			dF[1 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def) * HostArraysPtr.H_n[local] - HostArraysPtr.P_w[local]);
-			dF[2 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def) * HostArraysPtr.H_g[local] - HostArraysPtr.P_w[local]);
-			dF[3 + n * 4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'P', def) * HostArraysPtr.H_w[local] - 1.) 
-				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'P', def) * HostArraysPtr.H_n[local] - 1.)  
-				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'P', def) * HostArraysPtr.H_g[local] - 1.))
+			dF[0 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w') * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local]);
+			dF[1 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n') * HostArraysPtr.H_n[local] - HostArraysPtr.P_w[local]);
+			dF[2 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g') * HostArraysPtr.H_g[local] - HostArraysPtr.P_w[local]);
+			dF[3 + n * 4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'P') * HostArraysPtr.H_w[local] - 1.)
+				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'P') * HostArraysPtr.H_n[local] - 1.)
+				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'P') * HostArraysPtr.H_g[local] - 1.))
 				+ (1. - HostArraysPtr.m[local]) * (-1);
-			dF[4 + n * 4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'T', def) * HostArraysPtr.H_w[local] 
-				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', def) * c_w(HostArraysPtr.T[local], def)) 
-				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'T', def) * HostArraysPtr.H_n[local]
-				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', def) * c_n(HostArraysPtr.T[local], def))
-				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T', def) * HostArraysPtr.H_g[local]
-				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', def) * c_g(HostArraysPtr.T[local], def)))
-				+ (1. - HostArraysPtr.m[local]) * ro_r * c_r(HostArraysPtr.T[local], def);
+			dF[4 + n * 4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'T') * HostArraysPtr.H_w[local]
+				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w') * c_w(HostArraysPtr.T[local]))
+				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'T') * HostArraysPtr.H_n[local]
+				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n') * c_n(HostArraysPtr.T[local]))
+				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T') * HostArraysPtr.H_g[local]
+				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g') * c_g(HostArraysPtr.T[local])))
+				+ (1. - HostArraysPtr.m[local]) * ro_r * c_r(HostArraysPtr.T[local]);
 
 			reverse_matrix(dF, n);
 			mult_matrix_vector(correction, dF, F, n);
@@ -443,7 +445,7 @@ void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &
 			HostArraysPtr.S_g[local] = HostArraysPtr.S_g[local] - correction[2];
 			HostArraysPtr.P_w[local] = HostArraysPtr.P_w[local] - correction[3];
 			HostArraysPtr.T[local] = HostArraysPtr.T[local] - correction[4];
-			assign_H(HostArraysPtr, local, def);
+			assign_H(local);
 		}
 
 		// Обновление значения суммарной энергии, т.к. оно больше не понадобится

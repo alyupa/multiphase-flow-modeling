@@ -1,45 +1,47 @@
 #include <mpi.h>
 #include "defines.h"
 
+extern double *HostBuffer;
+
 // Округление целого в большую сторону
 // a - делимое, b - делитель
-int int_ceil(int a, int b)
+static int int_ceil(int a, int b)
 {
 	return (a + b-1) / b;
 }
 // Время обмена одним double между узлами
-double t_exch (unsigned int N)
+static double t_exch (unsigned int N)
 {
 	return 5.78E-9 * N + 5.54E-5;
 }
 // Время последовательных загрузки и выгрузки одного double с cpu на gpu
-double t_gpu_load (unsigned int N)
+static double t_gpu_load (unsigned int N)
 {
 	return 3.57E-9 * N + 5.94E-3;
 }
 // Время расчета одной точки на сpu, с
-double t_cpu_calc (unsigned int N)
+static double t_cpu_calc (unsigned int N)
 {
 	return 1.91E-6 * N - 2.96E-2;
 }
 // Время расчета одной точки на gpu, с
-double t_gpu_calc (unsigned int N)
+static double t_gpu_calc (unsigned int N)
 {
 	return 4.7E-8 * N + 5.72E-4;
 }
 
 // Недописанная функция оптимального деления сетки по процессорам
-void division(consts *def)
+void division()
 {
 	unsigned int Nx, Ny, Nz, size;
 	unsigned int N_parameters=20;
 	double T=0, T_min=0;
 	int flag=0;
 
-	size = (*def).size;
-	Nx = (*def).Nx;
-	Ny = (*def).Ny;
-	Nz = (*def).Nz;
+	size = def.size;
+	Nx = def.Nx;
+	Ny = def.Ny;
+	Nz = def.Nz;
 
 	unsigned int s_x, s_y, s_z;
 
@@ -50,11 +52,11 @@ void division(consts *def)
 			for(unsigned int s3=1;s3<=size/(s1*s2) && s3<Nz;s3++)
 			{
 				double T_calc = t_cpu_calc(int_ceil(Nx, s1) * int_ceil(Ny, s2) * int_ceil(Nz, s3));
-				double T_exch = 2. * (min(s1-1,1) * t_exch(int_ceil(Ny, s2) * int_ceil(Nz, s3)) 
-					+ min(s2-1,1) * t_exch(int_ceil(Nx, s1) * int_ceil(Nz, s3)) 
-					+ min(s3-1,1) * t_exch(int_ceil(Ny, s2) * int_ceil(Nx, s1))) * N_parameters;
+				double T_exch = 2. * (my_min(s1-1,1) * t_exch(int_ceil(Ny, s2) * int_ceil(Nz, s3))
+					+ my_min(s2-1,1) * t_exch(int_ceil(Nx, s1) * int_ceil(Nz, s3))
+					+ my_min(s3-1,1) * t_exch(int_ceil(Ny, s2) * int_ceil(Nx, s1))) * N_parameters;
 #ifdef GPU_H
-				double T_gpu_cpu = 2. * (min(s1-1,1) * t_gpu_load(int_ceil(Ny, s2) * int_ceil(Nz, s3)) 
+				double T_gpu_cpu = 2. * (my_min(s1-1,1) * t_gpu_load(int_ceil(Ny, s2) * int_ceil(Nz, s3))
 					+ min(s2-1,1) * t_gpu_load(int_ceil(Nx, s1) * int_ceil(Nz, s3)) 
 					+ min(s3-1,1) * t_gpu_load(int_ceil(Ny, s2) * int_ceil(Nx, s1))) * N_parameters;
 #else
@@ -70,16 +72,17 @@ void division(consts *def)
 				}
 			}
 
-		if(!(*def).rank)
+		if(!def.rank)
 			std::cout<<"s_x="<<s_x<<"  s_y="<<s_y<<"  s_z="<<s_z<<"  T_min="<<T_min<<"  flag="<<flag<<"\n";
 
-		(*def).sizex = s_x;
-		(*def).sizey = s_y;
-		(*def).sizez = s_z;
+		def.sizex = s_x;
+		def.sizey = s_y;
+		def.sizez = s_z;
+
 }
 
 // Передача и прием данных правой границе
-void right_send_recv(double* HostBuffer, int buffer_size, int destination_rank, int send_recv_id)
+static void right_send_recv(int buffer_size, int destination_rank, int send_recv_id)
 {
 	MPI_Status status;
 
@@ -90,7 +93,7 @@ void right_send_recv(double* HostBuffer, int buffer_size, int destination_rank, 
 }
 
 // Получение и передача данных на левой границе
-void left_recv_send(double* HostBuffer, int buffer_size, int destination_rank, int send_recv_id)
+static void left_recv_send(int buffer_size, int destination_rank, int send_recv_id)
 {
 	MPI_Status status;
 
@@ -110,7 +113,7 @@ void left_recv_send(double* HostBuffer, int buffer_size, int destination_rank, i
 // Для крайних процессоров соответствующие обмены не требуются
 // 3. Загружаем полученные данные в память ускорителя
 
-void exchange_direct(double* HostArrayPtr, double* DevArrayPtr, double* HostBuffer, double* DevBuffer, const consts &def, char axis)
+static void exchange_direct(double* HostArray, double* DevArray, char axis)
 {
 	if((def.rank) >= (def.sizex) * (def.sizey) * (def.sizez))
 		return;
@@ -124,32 +127,32 @@ void exchange_direct(double* HostArrayPtr, double* DevArrayPtr, double* HostBuff
 			{
 				if ((def.rankx) != (def.sizex) - 1)
 				{
-					load_exchange_data_part_xr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					right_send_recv(HostBuffer, (def.locNy) * (def.locNz), (def.rank) + 1, 500);    // (1.1)
-					save_exchange_data_part_xr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_xr(HostArray, DevArray); // (0)
+					right_send_recv((def.locNy) * (def.locNz), (def.rank) + 1, 500);    // (1.1)
+					save_exchange_data_part_xr(HostArray, DevArray); // (3)
 				}
 
 				if ((def.rankx) != 0)
 				{
-					load_exchange_data_part_xl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					left_recv_send(HostBuffer, (def.locNy) * (def.locNz), (def.rank) - 1, 502);    // (1.2)
-					save_exchange_data_part_xl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_xl(HostArray, DevArray); // (0)
+					left_recv_send((def.locNy) * (def.locNz), (def.rank) - 1, 502);    // (1.2)
+					save_exchange_data_part_xl(HostArray, DevArray); // (3)
 				}
 			}
 			else
 			{
 				if ((def.rankx) != 0) // В принципе, лишняя проверка
 				{
-					load_exchange_data_part_xl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					left_recv_send(HostBuffer, (def.locNy) * (def.locNz), (def.rank) - 1, 500);    // (2.1)
-					save_exchange_data_part_xl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_xl(HostArray, DevArray); // (0)
+					left_recv_send((def.locNy) * (def.locNz), (def.rank) - 1, 500);    // (2.1)
+					save_exchange_data_part_xl(HostArray, DevArray); // (3)
 				}
 
 				if ((def.rankx) != (def.sizex) - 1)
 				{
-					load_exchange_data_part_xr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					right_send_recv(HostBuffer, (def.locNy) * (def.locNz), (def.rank) + 1, 502);    // (2.2)
-					save_exchange_data_part_xr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_xr(HostArray, DevArray); // (0)
+					right_send_recv((def.locNy) * (def.locNz), (def.rank) + 1, 502);    // (2.2)
+					save_exchange_data_part_xr(HostArray, DevArray); // (3)
 				}
 			}
 		}
@@ -161,32 +164,32 @@ void exchange_direct(double* HostArrayPtr, double* DevArrayPtr, double* HostBuff
 			{
 				if ((def.ranky) != (def.sizey) - 1)
 				{
-					load_exchange_data_part_yr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					right_send_recv(HostBuffer, (def.locNx) * (def.locNz), (def.rank) + (def.sizex), 504);    // (1.1)
-					save_exchange_data_part_yr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_yr(HostArray, DevArray); // (0)
+					right_send_recv((def.locNx) * (def.locNz), (def.rank) + (def.sizex), 504);    // (1.1)
+					save_exchange_data_part_yr(HostArray, DevArray); // (3)
 				}
 
 				if ((def.ranky) != 0)
 				{
-					load_exchange_data_part_yl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					left_recv_send(HostBuffer, (def.locNx) * (def.locNz), (def.rank) - (def.sizex), 506);    // (1.2)
-					save_exchange_data_part_yl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_yl(HostArray, DevArray); // (0)
+					left_recv_send((def.locNx) * (def.locNz), (def.rank) - (def.sizex), 506);    // (1.2)
+					save_exchange_data_part_yl(HostArray, DevArray); // (3)
 				}
 			}
 			else
 			{
 				if ((def.ranky) != 0) // В принципе, лишняя проверка
 				{
-					load_exchange_data_part_yl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					left_recv_send(HostBuffer, (def.locNx) * (def.locNz), (def.rank) - (def.sizex), 504);    // (2.1)
-					save_exchange_data_part_yl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_yl(HostArray, DevArray); // (0)
+					left_recv_send((def.locNx) * (def.locNz), (def.rank) - (def.sizex), 504);    // (2.1)
+					save_exchange_data_part_yl(HostArray, DevArray); // (3)
 				}
 
 				if ((def.ranky) != (def.sizey) - 1)
 				{
-					load_exchange_data_part_yr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					right_send_recv(HostBuffer, (def.locNx) * (def.locNz), (def.rank) + (def.sizex), 506);    // (2.2)
-					save_exchange_data_part_yr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_yr(HostArray, DevArray); // (0)
+					right_send_recv((def.locNx) * (def.locNz), (def.rank) + (def.sizex), 506);    // (2.2)
+					save_exchange_data_part_yr(HostArray, DevArray); // (3)
 				}
 			}
 		}
@@ -198,32 +201,32 @@ void exchange_direct(double* HostArrayPtr, double* DevArrayPtr, double* HostBuff
 			{
 				if ((def.rankz) != (def.sizez) - 1)
 				{
-					load_exchange_data_part_zr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					right_send_recv(HostBuffer, (def.locNx) * (def.locNy), (def.rank) + (def.sizex) * (def.sizey), 508);    // (1.1)
-					save_exchange_data_part_zr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_zr(HostArray, DevArray); // (0)
+					right_send_recv((def.locNx) * (def.locNy), (def.rank) + (def.sizex) * (def.sizey), 508);    // (1.1)
+					save_exchange_data_part_zr(HostArray, DevArray); // (3)
 				}
 
 				if ((def.rankz) != 0)
 				{
-					load_exchange_data_part_zl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					left_recv_send(HostBuffer, (def.locNx) * (def.locNy), (def.rank) - (def.sizex) * (def.sizey), 510);    // (1.2)
-					save_exchange_data_part_zl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_zl(HostArray, DevArray); // (0)
+					left_recv_send((def.locNx) * (def.locNy), (def.rank) - (def.sizex) * (def.sizey), 510);    // (1.2)
+					save_exchange_data_part_zl(HostArray, DevArray); // (3)
 				}
 			}
 			else
 			{
 				if ((def.rankz) != 0) // В принципе, лишняя проверка
 				{
-					load_exchange_data_part_zl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					left_recv_send(HostBuffer, (def.locNx) * (def.locNy), (def.rank) - (def.sizex) * (def.sizey), 508);    // (2.1)
-					save_exchange_data_part_zl(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_zl(HostArray, DevArray); // (0)
+					left_recv_send((def.locNx) * (def.locNy), (def.rank) - (def.sizex) * (def.sizey), 508);    // (2.1)
+					save_exchange_data_part_zl(HostArray, DevArray); // (3)
 				}
 
 				if ((def.rankz) != (def.sizez) - 1)
 				{
-					load_exchange_data_part_zr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (0)
-					right_send_recv(HostBuffer, (def.locNx) * (def.locNy), (def.rank) + (def.sizex) * (def.sizey), 510);    // (2.2)
-					save_exchange_data_part_zr(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def); // (3)
+					load_exchange_data_part_zr(HostArray, DevArray); // (0)
+					right_send_recv((def.locNx) * (def.locNy), (def.rank) + (def.sizex) * (def.sizey), 510);    // (2.2)
+					save_exchange_data_part_zr(HostArray, DevArray); // (3)
 				}
 			}
 		}
@@ -233,30 +236,30 @@ void exchange_direct(double* HostArrayPtr, double* DevArrayPtr, double* HostBuff
 	}
 }
 
-void exchange(double* HostArrayPtr, double* DevArrayPtr, double* HostBuffer, double* DevBuffer, const consts &def)
+void exchange(double* HostArray, double* DevArray)
 {
-	exchange_direct(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def, 'x');
-	exchange_direct(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def, 'y');
-	exchange_direct(HostArrayPtr, DevArrayPtr, HostBuffer, DevBuffer, def, 'z');
+	exchange_direct(HostArray, DevArray, 'x');
+	exchange_direct(HostArray, DevArray, 'y');
+	exchange_direct(HostArray, DevArray, 'z');
 }
 
-// Обмен граничными значениями давления воды P1 и насыщенности NAPL S2 между процессорами
-void exchange_basic_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def)
+// Обмен граничными значениями
+void exchange_basic_vars()
 {
-	exchange(HostArraysPtr.P_w, DevArraysPtr.P_w, HostBuffer, DevBuffer, def);
-	exchange(HostArraysPtr.S_n, DevArraysPtr.S_n, HostBuffer, DevBuffer, def);
-	exchange(HostArraysPtr.S_w, DevArraysPtr.S_w, HostBuffer, DevBuffer, def);
+	exchange(HostArraysPtr.P_w, DevArraysPtr.P_w);
+	exchange(HostArraysPtr.S_n, DevArraysPtr.S_n);
+	exchange(HostArraysPtr.S_w, DevArraysPtr.S_w);
 #ifdef ENERGY
-	exchange(HostArraysPtr.T, DevArraysPtr.T, HostBuffer, DevBuffer, def);
+	exchange(HostArraysPtr.T, DevArraysPtr.T);
 #endif
 }
 
-void communication_initialization(int argc, char* argv[], consts* def)
+void communication_initialization(int argc, char* argv[])
 {
 	MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD, &((*def).size)); // The amount of processors
-	MPI_Comm_rank(MPI_COMM_WORLD, &((*def).rank)); // The number of processor
-	//std::cout << "size =" <<(*def).size<<"  "<<"rank = "<<(*def).rank<<"\n";
+	MPI_Comm_size(MPI_COMM_WORLD, &(def.size)); // The amount of processors
+	MPI_Comm_rank(MPI_COMM_WORLD, &(def.rank)); // The number of processor
+	//std::cout << "size =" <<defsize<<"  "<<"rank = "<<defrank<<"\n";
 }
 
 void communication_finalization(void)

@@ -1,27 +1,29 @@
 #include "defines.h"
 
-void prepare_all_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+extern double *HostBuffer;
+
+void prepare_all_vars()
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
 			{
-				prepare_local_vars(HostArraysPtr, i, j, k, def);
+				prepare_local_vars(i, j, k);
 			}
 }
 
-void u_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+void u_calculation()
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
 				if (ACTIVE_POINT)
 				{
-					assign_u(HostArraysPtr, i, j, k, def);
+					assign_u(i, j, k);
 				}
 }
 
-void find_values_from_partial_equations(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def)
+void find_values_from_partial_equations(double t)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
@@ -29,44 +31,44 @@ void find_values_from_partial_equations(const ptr_Arrays &HostArraysPtr, const p
 				if (ACTIVE_POINT)
 				{
 #ifdef NR
-					assign_roS_nr(HostArraysPtr, t, i, j, k, def);
+					assign_roS_nr(t, i, j, k);
 #else
-					assign_roS(HostArraysPtr, t, i, j, k, def);
+					assign_roS(t, i, j, k);
 #endif
 #ifdef ENERGY
-					assign_E_new(HostArraysPtr, i, j, k, def);
+					assign_E_new(i, j, k);
 #endif
 				}
 }
 
-void solve_nonlinear_system(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+void solve_nonlinear_system()
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
 				if (ACTIVE_POINT)
 				{
-					Newton(HostArraysPtr, i, j, k, def);
+					Newton(i, j, k);
 				}
 }
 
-void boundary_conditions(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def)
+void boundary_conditions()
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 			for (int k = 0; k < (def.locNz); k++)
 				if (ACTIVE_POINT)
 				{
-					Border_S(HostArraysPtr, i, j, k, def);
-					Border_P(HostArraysPtr, i, j, k, def);
+					Border_S(i, j, k);
+					Border_P(i, j, k);
 #ifdef ENERGY
-					Border_T(HostArraysPtr, i, j, k, def);
+					Border_T(i, j, k);
 #endif
 				}
 }
 
 // Вычисление координаты точки, через которую будет вычисляться значение на границе (i1, j1, k1)
-int set_boundary_basic_coordinate(int i, int j, int k, const consts &def)
+int set_boundary_basic_coordinate(int i, int j, int k)
 {
 	int i1, j1, k1;
 
@@ -102,7 +104,7 @@ int set_boundary_basic_coordinate(int i, int j, int k, const consts &def)
 	return (i1 + j1 * (def.locNx) + k1 * (def.locNx) * (def.locNy));
 }
 
-void assign_ro(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+void assign_ro(int local)
 {
 #ifdef ENERGY
 	// !!! Вынести коэффициенты теплового расширения в const consts &def и использовать T_0 оттуда же
@@ -123,14 +125,14 @@ void assign_ro(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
 	test_ro(HostArraysPtr.ro_n[local], __FILE__, __LINE__);
 }
 
-void assign_S(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+void assign_S(int local)
 {
 	HostArraysPtr.S_g[local] = 1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local];
 	test_S(HostArraysPtr.S_g[local], __FILE__, __LINE__);
 }
 
 // Расчет центральной разности
-double central_difference (double* ptr, char axis, const consts &def)
+double central_difference (double* ptr, char axis)
 {
 	switch (axis)
 	{
@@ -155,7 +157,7 @@ double central_difference (double* ptr, char axis, const consts &def)
 }
 
 // Расчет центральной разности для произведения двух элементов структуры
-double multi_central_difference (double* ptr1, double* ptr2, char axis, const consts &def)
+double multi_central_difference (double* ptr1, double* ptr2, char axis)
 {
 	switch (axis)
 	{
@@ -181,7 +183,7 @@ double multi_central_difference (double* ptr1, double* ptr2, char axis, const co
 }
 
 // Расчет направленной разности
-double directed_difference (double x1, double x2, double* Xi, double* ro, char axis, const consts &def)
+double directed_difference (double x1, double x2, double* Xi, double* ro, char axis)
 {
 	switch (axis)
 	{
@@ -212,7 +214,7 @@ double directed_difference (double x1, double x2, double* Xi, double* ro, char a
 }
 
 // Расчет левой разности
-double left_difference (double* ptr, char axis, const consts &def)
+double left_difference (double* ptr, char axis)
 {
 	switch (axis)
 	{
@@ -237,7 +239,7 @@ double left_difference (double* ptr, char axis, const consts &def)
 }
 
 // Расчет правой разности
-double right_difference (double* ptr, char axis, const consts &def)
+double right_difference (double* ptr, char axis)
 {
 	switch (axis)
 	{
@@ -262,7 +264,7 @@ double right_difference (double* ptr, char axis, const consts &def)
 }
 
 // Расчет divgrad для произведения двух элементов структуры
-double multi_divgrad (double* ptr1, double* ptr2, char axis, const consts &def)
+double multi_divgrad (double* ptr1, double* ptr2, char axis)
 {
 	switch (axis)
 	{
@@ -291,30 +293,30 @@ double multi_divgrad (double* ptr1, double* ptr2, char axis, const consts &def)
 
 
 // Расчет скоростей в точке
-void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void assign_u(int i, int j, int k)
 {
 	int local=i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 	if ((def.Nx) > 2)
 	{
 		if (i == 0)
 		{
-			HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * right_difference(HostArraysPtr.P_w+local, 'x', def);
-			HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * right_difference(HostArraysPtr.P_n+local, 'x', def);
-			HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * right_difference(HostArraysPtr.P_g+local, 'x', def);
+			HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * right_difference(HostArraysPtr.P_w+local, 'x');
+			HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * right_difference(HostArraysPtr.P_n+local, 'x');
+			HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * right_difference(HostArraysPtr.P_g+local, 'x');
 		}
 		else
 		{
 			if (i == (def.locNx) - 1)
 			{
-				HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * left_difference(HostArraysPtr.P_w+local, 'x', def);
-				HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * left_difference(HostArraysPtr.P_n+local, 'x', def);
-				HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * left_difference(HostArraysPtr.P_g+local, 'x', def);
+				HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * left_difference(HostArraysPtr.P_w+local, 'x');
+				HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * left_difference(HostArraysPtr.P_n+local, 'x');
+				HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * left_difference(HostArraysPtr.P_g+local, 'x');
 			}
 			else
 			{
-				HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * central_difference (HostArraysPtr.P_w+local, 'x', def);
-				HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * central_difference (HostArraysPtr.P_n+local, 'x', def);
-				HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * central_difference (HostArraysPtr.P_g+local, 'x', def);
+				HostArraysPtr.ux_w[local] = HostArraysPtr.Xi_w[local] * central_difference (HostArraysPtr.P_w+local, 'x');
+				HostArraysPtr.ux_n[local] = HostArraysPtr.Xi_n[local] * central_difference (HostArraysPtr.P_n+local, 'x');
+				HostArraysPtr.ux_g[local] = HostArraysPtr.Xi_g[local] * central_difference (HostArraysPtr.P_g+local, 'x');
 			}
 		}
 	}
@@ -329,23 +331,23 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 	{
 		if (j == 0)
 		{
-			HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (right_difference (HostArraysPtr.P_w+local, 'y', def) - HostArraysPtr.ro_w[local] * (def.g_const));
-			HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (right_difference (HostArraysPtr.P_n+local, 'y', def) - HostArraysPtr.ro_n[local] * (def.g_const));
-			HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (right_difference (HostArraysPtr.P_g+local, 'y', def) - HostArraysPtr.ro_g[local] * (def.g_const));
+			HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (right_difference (HostArraysPtr.P_w+local, 'y') - HostArraysPtr.ro_w[local] * (def.g_const));
+			HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (right_difference (HostArraysPtr.P_n+local, 'y') - HostArraysPtr.ro_n[local] * (def.g_const));
+			HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (right_difference (HostArraysPtr.P_g+local, 'y') - HostArraysPtr.ro_g[local] * (def.g_const));
 		}
 		else
 		{
 			if (j == (def.locNy) - 1)
 			{
-				HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (left_difference (HostArraysPtr.P_w+local, 'y', def) - HostArraysPtr.ro_w[local] * (def.g_const));
-				HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (left_difference (HostArraysPtr.P_n+local, 'y', def) - HostArraysPtr.ro_n[local] * (def.g_const));
-				HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (left_difference (HostArraysPtr.P_g+local, 'y', def) - HostArraysPtr.ro_g[local] * (def.g_const));
+				HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (left_difference (HostArraysPtr.P_w+local, 'y') - HostArraysPtr.ro_w[local] * (def.g_const));
+				HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (left_difference (HostArraysPtr.P_n+local, 'y') - HostArraysPtr.ro_n[local] * (def.g_const));
+				HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (left_difference (HostArraysPtr.P_g+local, 'y') - HostArraysPtr.ro_g[local] * (def.g_const));
 			}
 			else
 			{
-				HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (central_difference (HostArraysPtr.P_w+local, 'y', def)	- HostArraysPtr.ro_w[local] * (def.g_const));
-				HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (central_difference (HostArraysPtr.P_n+local, 'y', def)	- HostArraysPtr.ro_n[local] * (def.g_const));
-				HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (central_difference (HostArraysPtr.P_g+local, 'y', def)	- HostArraysPtr.ro_g[local] * (def.g_const));
+				HostArraysPtr.uy_w[local] = HostArraysPtr.Xi_w[local] * (central_difference (HostArraysPtr.P_w+local, 'y')	- HostArraysPtr.ro_w[local] * (def.g_const));
+				HostArraysPtr.uy_n[local] = HostArraysPtr.Xi_n[local] * (central_difference (HostArraysPtr.P_n+local, 'y')	- HostArraysPtr.ro_n[local] * (def.g_const));
+				HostArraysPtr.uy_g[local] = HostArraysPtr.Xi_g[local] * (central_difference (HostArraysPtr.P_g+local, 'y')	- HostArraysPtr.ro_g[local] * (def.g_const));
 			}
 		}
 	}
@@ -360,23 +362,23 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 	{
 		if (k == 0)
 		{
-			HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * right_difference (HostArraysPtr.P_w+local, 'z', def);
-			HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * right_difference (HostArraysPtr.P_n+local, 'z', def);
-			HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * right_difference (HostArraysPtr.P_g+local, 'z', def);
+			HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * right_difference (HostArraysPtr.P_w+local, 'z');
+			HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * right_difference (HostArraysPtr.P_n+local, 'z');
+			HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * right_difference (HostArraysPtr.P_g+local, 'z');
 		}
 		else
 		{
 			if (k == (def.locNz) - 1)
 			{
-				HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * left_difference (HostArraysPtr.P_w+local, 'z', def);
-				HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * left_difference (HostArraysPtr.P_n+local, 'z', def);
-				HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * left_difference (HostArraysPtr.P_g+local, 'z', def);
+				HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * left_difference (HostArraysPtr.P_w+local, 'z');
+				HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * left_difference (HostArraysPtr.P_n+local, 'z');
+				HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * left_difference (HostArraysPtr.P_g+local, 'z');
 			}
 			else
 			{
-				HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * central_difference (HostArraysPtr.P_w+local, 'z', def);
-				HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * central_difference (HostArraysPtr.P_n+local, 'z', def);
-				HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * central_difference (HostArraysPtr.P_g+local, 'z', def);
+				HostArraysPtr.uz_w[local] = HostArraysPtr.Xi_w[local] * central_difference (HostArraysPtr.P_w+local, 'z');
+				HostArraysPtr.uz_n[local] = HostArraysPtr.Xi_n[local] * central_difference (HostArraysPtr.P_n+local, 'z');
+				HostArraysPtr.uz_g[local] = HostArraysPtr.Xi_g[local] * central_difference (HostArraysPtr.P_g+local, 'z');
 			}
 		}
 	}
@@ -398,7 +400,7 @@ void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 	test_u(HostArraysPtr.uz_g[local], __FILE__, __LINE__);
 }
 
-void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def)
+void assign_roS(double t, int i, int j, int k)
 {
 	if (INTERNAL_POINT)
 	{
@@ -422,13 +424,13 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 		}
 		else
 		{
-			divgrad1 = multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'z', def);
-			divgrad2 = multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'z', def);
-			divgrad3 = multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'z', def);
+			divgrad1 = multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'z');
+			divgrad2 = multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'z');
+			divgrad3 = multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'z');
 
-			Tz1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'z', def);
-			Tz2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'z', def);
-			Tz3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'z', def);
+			Tz1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'z');
+			Tz2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'z');
+			Tz3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'z');
 		}
 
 		if ((def.Nx) < 2)
@@ -440,27 +442,27 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 		}
 		else
 		{
-			divgrad1 += multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'x', def);
-			divgrad2 += multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'x', def);
-			divgrad3 += multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'x', def);
+			divgrad1 += multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'x');
+			divgrad2 += multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'x');
+			divgrad3 += multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'x');
 
-			Tx1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'x', def);
-			Tx2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'x', def);
-			Tx3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'x', def);
+			Tx1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'x');
+			Tx2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'x');
+			Tx3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'x');
 		}
 
-		divgrad1 += multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'y', def);
+		divgrad1 += multi_divgrad (HostArraysPtr.ro_w + local, HostArraysPtr.S_w + local, 'y');
 		divgrad1 *= HostArraysPtr.m[local] * (def.l) * (def.c_w);
 
-		divgrad2 += multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'y', def);
+		divgrad2 += multi_divgrad (HostArraysPtr.ro_n + local, HostArraysPtr.S_n + local, 'y');
 		divgrad2 *= HostArraysPtr.m[local] * (def.l) * (def.c_n);
 
-		divgrad3 += multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'y', def);
+		divgrad3 += multi_divgrad (HostArraysPtr.ro_g + local, HostArraysPtr.S_g + local, 'y');
 		divgrad3 *= HostArraysPtr.m[local] * (def.l) * (def.c_g);
 
-		Ty1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'y', def);		
-		Ty2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'y', def);
-		Ty3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'y', def);
+		Ty1 = multi_central_difference (HostArraysPtr.ro_w + local, HostArraysPtr.uz_w + local, 'y');
+		Ty2 = multi_central_difference (HostArraysPtr.ro_n + local, HostArraysPtr.uz_n + local, 'y');
+		Ty3 = multi_central_difference (HostArraysPtr.ro_g + local, HostArraysPtr.uz_g + local, 'y');
 
 		test_arrowhead(Tx1 + Ty1 + Tz1, divgrad1, __FILE__, __LINE__);
 		test_arrowhead(Tx2 + Ty2 + Tz2, divgrad2, __FILE__, __LINE__);
@@ -471,7 +473,7 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 		double q_g = 0.;
 
 		// Значения q на скважинах
-		wells_q(HostArraysPtr, i, j, k, &q_w, &q_n, &q_g, def);
+		wells_q(i, j, k, &q_w, &q_n, &q_g);
 
 		if ((t < 2 * (def.dt)) || TWO_LAYERS)
 		{
@@ -491,10 +493,6 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 			A3 = (1. / ((HostArraysPtr.m[local]) * (def.dt) + 2. * (def.tau))) * (2. * (def.dt) * (def.dt) * (q_g + divgrad3 - Tx3 - Ty3 - Tz3)
 			        + ((HostArraysPtr.m[local]) * (def.dt) - 2. * (def.tau)) * HostArraysPtr.roS_g_old[local]
 			        + 4. * (def.tau) * HostArraysPtr.roS_g[i + j * (def.locNx) + k * (def.locNx) * (def.locNy)]);
-
-			test_tau(HostArraysPtr.roS_w_old[local], HostArraysPtr.roS_w[local], A1, local, def, __FILE__, __LINE__);
-			test_tau(HostArraysPtr.roS_n_old[local], HostArraysPtr.roS_n[local], A2, local, def, __FILE__, __LINE__);
-			test_tau(HostArraysPtr.roS_g_old[local], HostArraysPtr.roS_g[local], A3, local, def, __FILE__, __LINE__);
 		}
 
 		HostArraysPtr.roS_w_old[local] = HostArraysPtr.roS_w[local];
@@ -511,7 +509,7 @@ void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, 
 }
 
 
-void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def)
+void assign_roS_nr(double t, int i, int j, int k)
 {
 	if (INTERNAL_POINT)
 	{
@@ -525,7 +523,7 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		double q_g = 0.;
 
 		// Значения q на скважинах
-		wells_q(HostArraysPtr, i, j, k, &q_w, &q_n, &q_g, def);
+		wells_q(i, j, k, &q_w, &q_n, &q_g);
 
 		HostArraysPtr.roS_w[local] = HostArraysPtr.ro_w[local] * HostArraysPtr.S_w[local];
 		HostArraysPtr.roS_g[local] = HostArraysPtr.ro_g[local]
@@ -544,17 +542,17 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		}
 		else
 		{
-			z2 = -1. * right_difference (HostArraysPtr.P_w+local, 'z', def);
-			z1 = -1. * left_difference (HostArraysPtr.P_w+local, 'z', def);
-			fz_w = directed_difference (z1, z2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'z', def);
+			z2 = -1. * right_difference (HostArraysPtr.P_w+local, 'z');
+			z1 = -1. * left_difference (HostArraysPtr.P_w+local, 'z');
+			fz_w = directed_difference (z1, z2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'z');
 
-			z2 = -1. * right_difference (HostArraysPtr.P_n+local, 'z', def); 
-			z1 = -1. * left_difference (HostArraysPtr.P_n+local, 'z', def); 
-			fz_n = directed_difference (z1, z2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'z', def);
+			z2 = -1. * right_difference (HostArraysPtr.P_n+local, 'z');
+			z1 = -1. * left_difference (HostArraysPtr.P_n+local, 'z');
+			fz_n = directed_difference (z1, z2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'z');
 
-			z2 = -1. * right_difference (HostArraysPtr.P_g+local, 'z', def); 
-			z1 = -1. * left_difference (HostArraysPtr.P_g+local, 'z', def); 
-			fz_g = directed_difference (z1, z2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'z', def);
+			z2 = -1. * right_difference (HostArraysPtr.P_g+local, 'z');
+			z1 = -1. * left_difference (HostArraysPtr.P_g+local, 'z');
+			fz_g = directed_difference (z1, z2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'z');
 
 		}
 
@@ -566,26 +564,26 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		}
 		else
 		{
-			x2 = -1. * right_difference (HostArraysPtr.P_w+local, 'x', def); //-(HostArraysPtr.P_w[i + 1 + j * (def.locNx) + k * (def.locNx) * (def.locNy)] - Pw) / def.hx;
-			x1 = -1. * left_difference (HostArraysPtr.P_w+local, 'x', def); //-(Pw - HostArraysPtr.P_w[i - 1 + j * (def.locNx) + k * (def.locNx) * (def.locNy)]) / def.hx;
-			fx_w = directed_difference (x1, x2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'x', def);
+			x2 = -1. * right_difference (HostArraysPtr.P_w+local, 'x'); //-(HostArraysPtr.P_w[i + 1 + j * (def.locNx) + k * (def.locNx) * (def.locNy)] - Pw) / def.hx;
+			x1 = -1. * left_difference (HostArraysPtr.P_w+local, 'x'); //-(Pw - HostArraysPtr.P_w[i - 1 + j * (def.locNx) + k * (def.locNx) * (def.locNy)]) / def.hx;
+			fx_w = directed_difference (x1, x2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'x');
 
-			x2 = -1. * right_difference (HostArraysPtr.P_n+local, 'x', def); 
-			x1 = -1. * left_difference (HostArraysPtr.P_n+local, 'x', def);
-			fx_n = directed_difference (x1, x2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'x', def);
+			x2 = -1. * right_difference (HostArraysPtr.P_n+local, 'x');
+			x1 = -1. * left_difference (HostArraysPtr.P_n+local, 'x');
+			fx_n = directed_difference (x1, x2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'x');
 
-			x2 = -1. * right_difference (HostArraysPtr.P_g+local, 'x', def); 
-			x1 = -1. * left_difference (HostArraysPtr.P_g+local, 'x', def); 
-			fx_g = directed_difference (x1, x2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'x', def);
+			x2 = -1. * right_difference (HostArraysPtr.P_g+local, 'x');
+			x1 = -1. * left_difference (HostArraysPtr.P_g+local, 'x');
+			fx_g = directed_difference (x1, x2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'x');
 		}
 
-		y2 = -1. * right_difference (HostArraysPtr.P_w+local, 'y', def) + def.g_const * (HostArraysPtr.ro_w[local]);
-		y1 = -1. * left_difference (HostArraysPtr.P_w+local, 'y', def) + def.g_const * (HostArraysPtr.ro_w[local]);
-		fy_w = directed_difference (y1, y2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'y', def);
+		y2 = -1. * right_difference (HostArraysPtr.P_w+local, 'y') + def.g_const * (HostArraysPtr.ro_w[local]);
+		y1 = -1. * left_difference (HostArraysPtr.P_w+local, 'y') + def.g_const * (HostArraysPtr.ro_w[local]);
+		fy_w = directed_difference (y1, y2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'y');
  
-		y2 = -1. * right_difference (HostArraysPtr.P_n+local, 'y', def) + def.g_const * (HostArraysPtr.ro_n[local]);
-		y1 = -1. * left_difference (HostArraysPtr.P_n+local, 'y', def) + def.g_const * (HostArraysPtr.ro_n[local]);
-		fy_n = directed_difference (y1, y2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'y', def);
+		y2 = -1. * right_difference (HostArraysPtr.P_n+local, 'y') + def.g_const * (HostArraysPtr.ro_n[local]);
+		y1 = -1. * left_difference (HostArraysPtr.P_n+local, 'y') + def.g_const * (HostArraysPtr.ro_n[local]);
+		fy_n = directed_difference (y1, y2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'y');
 
 		A1 = HostArraysPtr.roS_w[local] - (def.dt / HostArraysPtr.m[local]) * (-q_w + fx_w + fy_w + fz_w);
 		A2 = HostArraysPtr.roS_n[local] - (def.dt / HostArraysPtr.m[local]) * (-q_n + fx_n + fy_n + fz_n);
@@ -598,9 +596,9 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 		test_positive(HostArraysPtr.roS_w[local], __FILE__, __LINE__);
 		test_positive(HostArraysPtr.roS_n[local], __FILE__, __LINE__);
 
-		y2 = -1. * right_difference (HostArraysPtr.P_g+local, 'y', def) + def.g_const * (HostArraysPtr.ro_g[local]);
-		y1 = -1. * left_difference (HostArraysPtr.P_g+local, 'y', def) + def.g_const * (HostArraysPtr.ro_g[local]);
-		fy_g = directed_difference (y1, y2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'y', def);
+		y2 = -1. * right_difference (HostArraysPtr.P_g+local, 'y') + def.g_const * (HostArraysPtr.ro_g[local]);
+		y1 = -1. * left_difference (HostArraysPtr.P_g+local, 'y') + def.g_const * (HostArraysPtr.ro_g[local]);
+		fy_g = directed_difference (y1, y2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'y');
 
 		A3 = HostArraysPtr.roS_g[local] - (def.dt / HostArraysPtr.m[local]) * (q_g + fx_g + fy_g + fz_g);
 
@@ -612,32 +610,32 @@ void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int 
 }
 
 // Функция загрузки данных в память хоста
-void load_data_to_host(double *HostArrayPtr, double *DevArrayPtr, const consts &def)
+void load_data_to_host(double *HostArray, double *DevArray)
 {
 }
 
 // Функция загрузки данных типа double в память ускорителя
-void load_data_to_device(double *HostArrayPtr, double *DevArrayPtr, const consts &def)
+void load_data_to_device(double *HostArray, double *DevArray)
 {
 }
 
 // Функция загрузки данных типа int в память ускорителя
-void load_data_to_device_int(int *HostArrayPtr, int *DevArrayPtr, const consts &def)
+void load_data_to_device_int(int *HostArray, int *DevArray)
 {
 }
 
 // Выделение памяти ускорителя под массив точек расчетной области
-void device_memory_allocation(ptr_Arrays *ArraysPtr, double **DevBuffer, const consts &def)
+void device_memory_allocation()
 {
 }
 
 // Освобожение памяти ускорителя из под массива точек расчетной области
-void device_memory_free(ptr_Arrays ptDev, double *DevBuffer)
+void device_memory_free()
 {
 }
 
 // Инициализация ускорителя
-void device_initialization(consts *def)
+void device_initialization()
 {
 }
 
@@ -647,124 +645,124 @@ void device_finalization(void)
 }
 
 // Загрузка в буфер данных для обмена на границе. Для каждого из направлений своя функция. Направление - это ось координат и лево/право.
-void load_exchange_data_part_xl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void load_exchange_data_part_xl(double *HostArray, double *DevArray)
 {
 	for (int j = 0; j < (def.locNy); j++)
 		for (int k = 0; k < (def.locNz); k++)
 		{
-			HostBuffer[j + (def.locNy)*k] = HostArrayPtr[1 + (def.locNx) * j + (def.locNx) * (def.locNy) * k];
+			HostBuffer[j + (def.locNy)*k] = HostArray[1 + (def.locNx) * j + (def.locNx) * (def.locNy) * k];
 			test_nan(HostBuffer[j + (def.locNy)*k], __FILE__, __LINE__);
 		}
 }
 
-void load_exchange_data_part_xr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void load_exchange_data_part_xr(double *HostArray, double *DevArray)
 {
 	for (int j = 0; j < (def.locNy); j++)
 		for (int k = 0; k < (def.locNz); k++)
 		{
-			HostBuffer[j + (def.locNy)*k] = HostArrayPtr[(def.locNx) - 2 + (def.locNx) * j + (def.locNx) * (def.locNy) * k];
+			HostBuffer[j + (def.locNy)*k] = HostArray[(def.locNx) - 2 + (def.locNx) * j + (def.locNx) * (def.locNy) * k];
 			test_nan(HostBuffer[j + (def.locNy)*k], __FILE__, __LINE__);
 		}
 }
 
-void load_exchange_data_part_yl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void load_exchange_data_part_yl(double *HostArray, double *DevArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int k = 0; k < (def.locNz); k++)
 		{
-			HostBuffer[i + (def.locNx)*k] = HostArrayPtr[i + (def.locNx) + (def.locNx) * (def.locNy) * k];
+			HostBuffer[i + (def.locNx)*k] = HostArray[i + (def.locNx) + (def.locNx) * (def.locNy) * k];
 			test_nan(HostBuffer[i + (def.locNx)*k], __FILE__, __LINE__);
 		}
 }
 
-void load_exchange_data_part_yr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void load_exchange_data_part_yr(double *HostArray, double *DevArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int k = 0; k < (def.locNz); k++)
 		{
-			HostBuffer[i + (def.locNx)*k] = HostArrayPtr[i + (def.locNx) * ((def.locNy) - 2) + (def.locNx) * (def.locNy) * k];
+			HostBuffer[i + (def.locNx)*k] = HostArray[i + (def.locNx) * ((def.locNy) - 2) + (def.locNx) * (def.locNy) * k];
 			test_nan(HostBuffer[i + (def.locNx)*k], __FILE__, __LINE__);
 		}
 }
 
-void load_exchange_data_part_zl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void load_exchange_data_part_zl(double *HostArray, double *DevArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 		{
-			HostBuffer[i + (def.locNx)*j] = HostArrayPtr[i + (def.locNx) * j + (def.locNx) * (def.locNy)];
+			HostBuffer[i + (def.locNx)*j] = HostArray[i + (def.locNx) * j + (def.locNx) * (def.locNy)];
 			test_nan(HostBuffer[i + (def.locNx)*j], __FILE__, __LINE__);
 		}
 }
 
-void load_exchange_data_part_zr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void load_exchange_data_part_zr(double *HostArray, double *DevArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 		{
-			HostBuffer[i + (def.locNx)*j] = HostArrayPtr[i + (def.locNx) * j + (def.locNx) * (def.locNy) * ((def.locNz) - 2)];
+			HostBuffer[i + (def.locNx)*j] = HostArray[i + (def.locNx) * j + (def.locNx) * (def.locNy) * ((def.locNz) - 2)];
 			test_nan(HostBuffer[i + (def.locNx)*j], __FILE__, __LINE__);
 		}
 }
 
 // Загрузка из буфера данных обмена на границе. Для каждого из направлений своя функция. Направление - это ось координат и лево/право.
-void save_exchange_data_part_xl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void save_exchange_data_part_xl(double *HostArray, double *DevArray)
 {
 	for (int j = 0; j < (def.locNy); j++)
 		for (int k = 0; k < (def.locNz); k++)
 		{
-			HostArrayPtr[(def.locNx)*j + (def.locNx) * (def.locNy)*k] = HostBuffer[j + (def.locNy) * k];
-			test_nan(HostArrayPtr[(def.locNx)*j + (def.locNx) * (def.locNy)*k], __FILE__, __LINE__);
+			HostArray[(def.locNx)*j + (def.locNx) * (def.locNy)*k] = HostBuffer[j + (def.locNy) * k];
+			test_nan(HostArray[(def.locNx)*j + (def.locNx) * (def.locNy)*k], __FILE__, __LINE__);
 		}
 }
 
-void save_exchange_data_part_xr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void save_exchange_data_part_xr(double *HostArray, double *DevArray)
 {
 	for (int j = 0; j < (def.locNy); j++)
 		for (int k = 0; k < (def.locNz); k++)
 		{
-			HostArrayPtr[(def.locNx) - 1 + (def.locNx)*j + (def.locNx) * (def.locNy)*k] = HostBuffer[j + (def.locNy) * k];
-			test_nan(HostArrayPtr[(def.locNx) - 1 + (def.locNx)*j + (def.locNx) * (def.locNy)*k], __FILE__, __LINE__);
+			HostArray[(def.locNx) - 1 + (def.locNx)*j + (def.locNx) * (def.locNy)*k] = HostBuffer[j + (def.locNy) * k];
+			test_nan(HostArray[(def.locNx) - 1 + (def.locNx)*j + (def.locNx) * (def.locNy)*k], __FILE__, __LINE__);
 		}
 }
 
-void save_exchange_data_part_yl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void save_exchange_data_part_yl(double *HostArray, double *DevArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int k = 0; k < (def.locNz); k++)
 		{
-			HostArrayPtr[i + (def.locNx) * (def.locNy) * k] = HostBuffer[i + (def.locNx)*k];
-			test_nan(HostArrayPtr[i + (def.locNx) * (def.locNy) * k], __FILE__, __LINE__);
+			HostArray[i + (def.locNx) * (def.locNy) * k] = HostBuffer[i + (def.locNx)*k];
+			test_nan(HostArray[i + (def.locNx) * (def.locNy) * k], __FILE__, __LINE__);
 		}
 }
 
-void save_exchange_data_part_yr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void save_exchange_data_part_yr(double *HostArray, double *DevArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int k = 0; k < (def.locNz); k++)
 		{
-			HostArrayPtr[i + (def.locNx) * ((def.locNy) - 1) + (def.locNx) * (def.locNy) * k] = HostBuffer[i + (def.locNx)*k];
-			test_nan(HostArrayPtr[i + (def.locNx) * ((def.locNy) - 1) + (def.locNx) * (def.locNy) * k], __FILE__, __LINE__);
+			HostArray[i + (def.locNx) * ((def.locNy) - 1) + (def.locNx) * (def.locNy) * k] = HostBuffer[i + (def.locNx)*k];
+			test_nan(HostArray[i + (def.locNx) * ((def.locNy) - 1) + (def.locNx) * (def.locNy) * k], __FILE__, __LINE__);
 		}
 }
 
-void save_exchange_data_part_zl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void save_exchange_data_part_zl(double *HostArray, double *DevArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 		{
-			HostArrayPtr[i + (def.locNx) * j] = HostBuffer[i + (def.locNx)*j];
-			test_nan(HostArrayPtr[i + (def.locNx) * j], __FILE__, __LINE__);
+			HostArray[i + (def.locNx) * j] = HostBuffer[i + (def.locNx)*j];
+			test_nan(HostArray[i + (def.locNx) * j], __FILE__, __LINE__);
 		}
 }
 
-void save_exchange_data_part_zr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def)
+void save_exchange_data_part_zr(double *HostArray, double *DevArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
 		{
-			HostArrayPtr[i + (def.locNx) * j + (def.locNx) * (def.locNy) * ((def.locNz) - 1)] = HostBuffer[i + (def.locNx)*j];
-			test_nan(HostArrayPtr[i + (def.locNx) * j + (def.locNx) * (def.locNy) * ((def.locNz) - 1)], __FILE__, __LINE__);
+			HostArray[i + (def.locNx) * j + (def.locNx) * (def.locNy) * ((def.locNz) - 1)] = HostBuffer[i + (def.locNx)*j];
+			test_nan(HostArray[i + (def.locNx) * j + (def.locNx) * (def.locNy) * ((def.locNz) - 1)], __FILE__, __LINE__);
 		}
 }
 

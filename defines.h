@@ -39,8 +39,8 @@
 #endif
 
 // Псевдо-функция минимума/максимума
-#define min(a,b) (((a) < (b)) ? (a) : (b))
-#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define my_min(a,b) (((a) < (b)) ? (a) : (b))
+#define my_max(a,b) (((a) > (b)) ? (a) : (b))
 
 // Point is active
 #define ACTIVE_POINT !( ((((def.rankx) != 0 && i == 0) || ((def.rankx) != (def.sizex) - 1 && i == (def.locNx) - 1)) && (def.Nx) >= 2) \
@@ -68,6 +68,9 @@ struct ptr_Arrays_tag
 #endif
 };
 typedef struct ptr_Arrays_tag ptr_Arrays;
+
+extern ptr_Arrays HostArraysPtr;
+extern ptr_Arrays DevArraysPtr;
 
 /*! 
  *  \brief     Структура параметров сред и характерных размеров задачи.
@@ -105,106 +108,103 @@ struct consts_tag
 };
 typedef struct consts_tag consts;
 
-void time_step_function(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* DevBuffer, const consts &def, double t);
-void initialization(ptr_Arrays* HostArraysPtr, ptr_Arrays* DevArraysPtr, long int* time_counter, int argc, char* argv[], consts* def);
-void load_permeability(double* K, const consts &def);
-void finalization(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* DevBuffer);
-void memory_allocation(ptr_Arrays* HostArraysPtr, ptr_Arrays* DevArraysPtr, const consts &def);
-void host_memory_allocation(ptr_Arrays* ArraysPtr, const consts &def);
-void device_memory_allocation(ptr_Arrays* ArraysPtr, double** DevBuffer, const consts &def);
-void memory_free(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr);
-void host_memory_free(const ptr_Arrays &HostArraysPtr);
-void device_memory_free(ptr_Arrays DevArraysPtr, double* DevBuffer);
-void save_data_plots(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def);
-void data_initialization(const ptr_Arrays &HostArraysPtr, long int* time_counter, const consts &def);
-void sizes_initialization(consts* def);
-void blocks_initialization(consts* def);
-void communication_initialization(int argc, char* argv[], consts* def);
-void communication_finalization(void);
-void global_to_local_vars(consts* def);
-int local_to_global(int local_index, char axis, const consts &def);
-int is_active_point(int i, int j, int k, const consts &def);
-void load_data_to_host(double* HostArrayPtr, double* DevArrayPtr, const consts &def);
-void load_data_to_device(double* HostArrayPtr, double* DevArrayPtr, const consts &def);
-void load_data_to_device_int(int* HostArrayPtr, int* DevArrayPtr, const consts &def);
+extern consts def;
 
-void device_initialization(consts* def);
+void time_step_function(double t);
+void initialization(long int* time_counter, int argc, char* argv[]);
+void load_permeability(double* K);
+void finalization();
+void memory_allocation();
+void host_memory_allocation();
+void device_memory_allocation();
+void memory_free();
+void host_memory_free();
+void device_memory_free();
+void save_data_plots(double t);
+void data_initialization(long int* time_counter);
+void sizes_initialization();
+void blocks_initialization();
+void communication_initialization(int argc, char* argv[]);
+void communication_finalization(void);
+void global_to_local_vars();
+int local_to_global(int local_index, char axis);
+int is_active_point(int i, int j, int k);
+void load_data_to_host(double* HostArrayPtr, double* DevArrayPtr);
+void load_data_to_device(double* HostArrayPtr, double* DevArrayPtr);
+void load_data_to_device_int(int* HostArrayPtr, int* DevArrayPtr);
+
+void device_initialization();
 void device_finalization(void);
 
-void division(consts* def);
+void division();
 
 // Служебные
-void print_plots_top(double t, const consts &def);
-void print_plots(const ptr_Arrays &HostArraysPtr, double t, const consts &def, int I, int J);
-void print_plot_row(const ptr_Arrays &HostArraysPtr, FILE* fp, int i, int j, int k, const consts &def);
-void print_hosts_configuration(const consts &def);
-void print_array_console(double* Arr, const consts &def, char axis);
+void print_plots_top(double t);
+void print_plots(double t, int I, int J);
+void print_plot_row(FILE* fp, int i, int j, int k);
+void print_hosts_configuration();
+void print_array_console(double* Arr, char axis);
 void barrier(void);
-void restore(const ptr_Arrays &HostArraysPtr, long int* time_counter, const consts &def);
-void save(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, long int time_counter, const consts &def);
-void read_defines(int argc, char *argv[], consts* def);
+void read_defines(int argc, char *argv[]);
 void print_error(const char *error, const char *file, int line);
 
 // Unit-тесты
-void test_correct_P_S(const ptr_Arrays &HostArraysPtr, const consts &def);
+void test_correct_P_S();
 void test_nan(double x, const char *file, int line);
 void test_positive(double x, const char *file, int line);
 void test_S(double S, const char *file, int line);
 void test_u(double u, const char *file, int line);
 void test_ro(double ro, const char *file, int line);
 void test_arrowhead(double big, double small, const char *file, int line);
-void test_tau(double S_old, double S_now, double S_new, int local, const consts &def, const char *file, int line);
-void read_defines_test(const consts &def);
+void read_defines_test();
 
 
 // Расчеты в каждой точке
-void prepare_local_vars(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-double ro_eff_gdy(const ptr_Arrays &HostArraysPtr, int local, const consts &def);
-void assign_P_Xi(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void assign_ro(const ptr_Arrays &HostArraysPtr, int local, const consts &def);
-void assign_S(const ptr_Arrays &HostArraysPtr, int local, const consts &def);
-void assign_u(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void assign_roS(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def);
-void assign_roS_nr(const ptr_Arrays &HostArraysPtr, double t, int i, int j, int k, const consts &def);
-void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void Border_S(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void Border_P(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-int set_boundary_basic_coordinate(int i, int j, int k, const consts &def);
+void prepare_local_vars(int i, int j, int k);
+double ro_eff_gdy(int local);
+void assign_P_Xi(int i, int j, int k);
+void assign_ro(int local);
+void assign_S(int local);
+void assign_u(int i, int j, int k);
+void assign_roS(double t, int i, int j, int k);
+void assign_roS_nr(double t, int i, int j, int k);
+void Newton(int i, int j, int k);
+void Border_S(int i, int j, int k);
+void Border_P(int i, int j, int k);
+int set_boundary_basic_coordinate(int i, int j, int k);
 int reverse_matrix (double *a, int n);
 void mult_matrix_vector (double* result_vect, double* matr, double* vect, int n);
 
-void prepare_all_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-void u_calculation(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-void find_values_from_partial_equations(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double t, const consts &def);
-void solve_nonlinear_system(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-void boundary_conditions(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, const consts &def);
-void exchange_basic_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def);
+void prepare_all_vars();
+void u_calculation();
+void find_values_from_partial_equations(double t);
+void solve_nonlinear_system();
+void boundary_conditions();
+void exchange_basic_vars();
 
-void load_exchange_data_part_xl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void load_exchange_data_part_xr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void load_exchange_data_part_yl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void load_exchange_data_part_yr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void load_exchange_data_part_zl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void load_exchange_data_part_zr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void save_exchange_data_part_xl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void save_exchange_data_part_xr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void save_exchange_data_part_yl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void save_exchange_data_part_yr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void save_exchange_data_part_zl(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
-void save_exchange_data_part_zr(double *HostArrayPtr, double *DevArrayPtr, double *HostBuffer, double *DevBuffer, const consts &def);
+void load_exchange_data_part_xl(double *HostArray, double *DevArray);
+void load_exchange_data_part_xr(double *HostArray, double *DevArray);
+void load_exchange_data_part_yl(double *HostArray, double *DevArray);
+void load_exchange_data_part_yr(double *HostArray, double *DevArray);
+void load_exchange_data_part_zl(double *HostArray, double *DevArray);
+void load_exchange_data_part_zr(double *HostArray, double *DevArray);
+void save_exchange_data_part_xl(double *HostArray, double *DevArray);
+void save_exchange_data_part_xr(double *HostArray, double *DevArray);
+void save_exchange_data_part_yl(double *HostArray, double *DevArray);
+void save_exchange_data_part_yr(double *HostArray, double *DevArray);
+void save_exchange_data_part_zl(double *HostArray, double *DevArray);
+void save_exchange_data_part_zr(double *HostArray, double *DevArray);
 
-int is_injection_well(int i, int j, int k, const consts &def);
-int is_output_well(int i, int j, int k, const consts &def);
-void wells_q(const ptr_Arrays &HostArraysPtr, int i, int j, int k, double* q_w, double* q_n, double* q_g, const consts &def);
+int is_injection_well(int i, int j, int k);
+int is_output_well(int i, int j, int k);
+void wells_q(int i, int j, int k, double* q_w, double* q_n, double* q_g);
 void assing_k(double* k_w, double* k_n, double S_w);
 
 #ifdef ENERGY
-void assign_H (const ptr_Arrays &HostArraysPtr, int local, const consts &def);
-double assign_T_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-double assign_E_flow (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void assign_E_current (const ptr_Arrays &HostArraysPtr, int local, const consts &def);
-void assign_E_new (const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
-void Border_T(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def);
+void assign_H (int local);
+void assign_E_current (int local);
+void assign_E_new (int i, int j, int k);
+void Border_T(int i, int j, int k);
 #endif
 
 #endif

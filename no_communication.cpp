@@ -1,20 +1,20 @@
 #include "defines.h"
 
-void division(consts *def)
+void division()
 {
-			(*def).sizex = 1;
-			(*def).sizey = 1;
-			(*def).sizez = 1;
+			def.sizex = 1;
+			def.sizey = 1;
+			def.sizez = 1;
 }
 
-void exchange_basic_vars(const ptr_Arrays &HostArraysPtr, const ptr_Arrays &DevArraysPtr, double* HostBuffer, double* DevBuffer, const consts &def)
+void exchange_basic_vars()
 {
 }
 
-void communication_initialization(int argc, char* argv[], consts *def)
+void communication_initialization(int argc, char* argv[])
 {
-	(*def).size = 1;
-	(*def).rank = 0;
+	def.size = 1;
+	def.rank = 0;
 }
 
 void communication_finalization(void)

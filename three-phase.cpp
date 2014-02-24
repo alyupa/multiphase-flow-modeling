@@ -1,40 +1,43 @@
 #include "defines.h"
 #include "three-phase.h"
 
+extern consts def;
+extern ptr_Arrays HostArraysPtr;
+
 // Номер среды
-int media = 0;
+const int media = 0;
 // Переломные точки насыщенностей при вычислении капиллярных давлений
-double S_w_range[2] = {0.1, 0.99};
-double S_g_range[2] = {0.005, 0.95};
+const double S_w_range[2] = {0.1, 0.99};
+const double S_g_range[2] = {0.005, 0.95};
 
 // Функции вычисления эффективных значений насыщенностей
-double assign_S_w_e(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+static inline double assign_S_w_e(int local)
 {
 	return (HostArraysPtr.S_w[local] - def.S_wr[media]) / (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]);
 }
 
-double assign_S_n_e(const ptr_Arrays &HostArraysPtr, int local, const consts &def)
+static inline double assign_S_n_e(int local)
 {
 	return (HostArraysPtr.S_n[local] - def.S_nr[media]) / (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]);
 }
 
 // Вычисление капиллярных давлений
 // Функции кап. давлений и их производных для центральной части интервала
-double P_k_nw(double S, const consts &def)
+static inline double P_k_nw(double S)
 {
 	return 0;
 	double A = def.lambda[media];
 	return def.P_d_nw[media] * pow((pow(S, A / (1. - A)) - 1.), 1. / A);
 }
 
-double P_k_gn(double S, const consts &def)
+static inline double P_k_gn(double S)
 {
 	return 0;
 	double A = def.lambda[media];
 	return def.P_d_gn[media] * pow(pow((1. - S), A / (1. - A)) - 1., 1. / A);
 }
 
-double P_k_nw_S(double S, const consts &def)
+static inline double P_k_nw_S(double S)
 {
 	return 0;
 	double A = def.lambda[media];
@@ -42,7 +45,7 @@ double P_k_nw_S(double S, const consts &def)
 		/ (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]);
 }
 
-double P_k_gn_S(double S, const consts &def)
+static inline double P_k_gn_S(double S)
 {
 	return 0;
 	double A = def.lambda[media];
@@ -53,7 +56,7 @@ double P_k_gn_S(double S, const consts &def)
 // Функции вычисления капиллярных давлений и производных на всем интервале
 // По краям интервала [0, 1] функции капиллярных давлений гладко заменяем линейными, производные меняются соответственно.
 // Описание можно посмотреть в файле mathcad.
-double assign_P_k_nw(double S_w_e, const consts &def)
+static inline double assign_P_k_nw(double S_w_e)
 {
 	return 0;
 
@@ -61,21 +64,21 @@ double assign_P_k_nw(double S_w_e, const consts &def)
 
 	if (S_w_e <= S_w_range[0])
 	{
-		Pk_nw = P_k_nw_S(S_w_range[0], def) * (S_w_e - S_w_range[0]) + P_k_nw(S_w_range[0], def);
+		Pk_nw = P_k_nw_S(S_w_range[0]) * (S_w_e - S_w_range[0]) + P_k_nw(S_w_range[0]);
 	}
 	else if (S_w_e >= S_w_range[1])
 	{
-		Pk_nw = P_k_nw_S(S_w_range[1], def) * (S_w_e - S_w_range[1]) + P_k_nw(S_w_range[1], def);;
+		Pk_nw = P_k_nw_S(S_w_range[1]) * (S_w_e - S_w_range[1]) + P_k_nw(S_w_range[1]);;
 	}
 	else
 	{
-		Pk_nw = P_k_nw(S_w_e, def);
+		Pk_nw = P_k_nw(S_w_e);
 	}
 
 	return Pk_nw;
 }
 
-double assign_P_k_gn(double S_g_e, const consts &def)
+static inline double assign_P_k_gn(double S_g_e)
 {
 	return 0;
 
@@ -83,22 +86,22 @@ double assign_P_k_gn(double S_g_e, const consts &def)
 
 	if (S_g_e <= S_g_range[0])
 	{
-		Pk_gn = P_k_gn_S(S_g_range[0], def) * (S_g_e - S_g_range[0]) + P_k_gn(S_g_range[0], def);
+		Pk_gn = P_k_gn_S(S_g_range[0]) * (S_g_e - S_g_range[0]) + P_k_gn(S_g_range[0]);
 	}
 	else if (S_g_e >= S_g_range[1])
 	{
-		Pk_gn = P_k_gn_S(S_g_range[1], def) * (S_g_e - S_g_range[1]) + P_k_gn(S_g_range[1], def);
+		Pk_gn = P_k_gn_S(S_g_range[1]) * (S_g_e - S_g_range[1]) + P_k_gn(S_g_range[1]);
 	}
 	else
 	{
-		Pk_gn = P_k_gn(S_g_e, def);
+		Pk_gn = P_k_gn(S_g_e);
 	}
 
 	return Pk_gn;
 }
 
 // Функции вычисления производных капиллярных давлений по насыщенностям
-double assign_P_k_nw_S(double S_w_e, const consts &def)
+static inline double assign_P_k_nw_S(double S_w_e)
 {
 	return 0;
 
@@ -106,21 +109,21 @@ double assign_P_k_nw_S(double S_w_e, const consts &def)
 
 	if (S_w_e <= S_w_range[0])
 	{
-		PkSw = P_k_nw_S(S_w_range[0], def);
+		PkSw = P_k_nw_S(S_w_range[0]);
 	}
 	else if (S_w_e >= S_w_range[1])
 	{
-		PkSw = P_k_nw_S(S_w_range[1], def);
+		PkSw = P_k_nw_S(S_w_range[1]);
 	}
 	else
 	{
-		PkSw = P_k_nw_S(S_w_e, def);
+		PkSw = P_k_nw_S(S_w_e);
 	}
 
 	return PkSw;
 }
 
-double assign_P_k_gn_S(double S_g_e, const consts &def)
+static inline double assign_P_k_gn_S(double S_g_e)
 {
 	return 0;
 
@@ -128,22 +131,22 @@ double assign_P_k_gn_S(double S_g_e, const consts &def)
 
 	if (S_g_e <= S_g_range[0])
 	{
-		PkSn = (-1) * P_k_gn_S(S_g_range[0], def);
+		PkSn = (-1) * P_k_gn_S(S_g_range[0]);
 	}
 	else if (S_g_e >= S_g_range[1])
 	{
-		PkSn = (-1) * P_k_gn_S(S_g_range[1], def);
+		PkSn = (-1) * P_k_gn_S(S_g_range[1]);
 	}
 	else
 	{
-		PkSn = P_k_gn_S(S_g_e, def);
+		PkSn = P_k_gn_S(S_g_e);
 	}
 
 	return PkSn;
 }
 
 // Функции вычисления относительных проницаемостей
-double assign_k_w(double S_w_e, const consts &def)
+static inline double assign_k_w(double S_w_e)
 {
 	double A = def.lambda[media];
 	double k_w = 0;
@@ -156,7 +159,7 @@ double assign_k_w(double S_w_e, const consts &def)
 	return k_w;
 }
 
-double assign_k_g(double S_g_e, const consts &def)
+static inline double assign_k_g(double S_g_e)
 {
 	double A = def.lambda[media];
 	double k_g = 0;
@@ -169,7 +172,7 @@ double assign_k_g(double S_g_e, const consts &def)
 	return k_g;
 }
 
-double assign_k_n(double S_w_e, double S_n_e, const consts &def)
+static inline double assign_k_n(double S_w_e, double S_n_e)
 {
 	double A = def.lambda[media];
 	double k_n = 0;
@@ -195,32 +198,32 @@ double assign_k_n(double S_w_e, double S_n_e, const consts &def)
 //6. Вычисление фазовых давлений c помощью капиллярных
 //7. Вычисление коэффициентов закона Дарси
 
-void prepare_local_vars(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void prepare_local_vars(int i, int j, int k)
 {
 	int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 	double k_w, k_g, k_n, Pk_nw, Pk_gn;
 
-	assign_S(HostArraysPtr, local, def);
+	assign_S(local);
 
-	double S_w_e = assign_S_w_e(HostArraysPtr, local, def);
-	double S_n_e = assign_S_n_e(HostArraysPtr, local, def);
+	double S_w_e = assign_S_w_e(local);
+	double S_n_e = assign_S_n_e(local);
 	double S_g_e = 1. - S_w_e - S_n_e;
 
-	k_w = assign_k_w(S_w_e, def);
-	k_g = assign_k_g(S_g_e, def);
-	k_n = assign_k_n(S_w_e, S_n_e, def);
+	k_w = assign_k_w(S_w_e);
+	k_g = assign_k_g(S_g_e);
+	k_n = assign_k_n(S_w_e, S_n_e);
 
-	Pk_nw = assign_P_k_nw(S_w_e, def);
-	Pk_gn = assign_P_k_gn(S_g_e, def);
+	Pk_nw = assign_P_k_nw(S_w_e);
+	Pk_gn = assign_P_k_gn(S_g_e);
 
 	HostArraysPtr.P_n[local] = HostArraysPtr.P_w[local] + Pk_nw;
 	HostArraysPtr.P_g[local] = HostArraysPtr.P_w[local] + Pk_nw + Pk_gn;
 
-	assign_ro(HostArraysPtr, local, def);
+	assign_ro(local);
 
 #ifdef ENERGY
-	assign_H(HostArraysPtr, local, def);
-	assign_E_current(HostArraysPtr, local, def);
+	assign_H(local);
+	assign_E_current(local);
 
 	// Вынести в константы!!!
 	double mu_w = 1. / (29.21 * HostArraysPtr.T[local] - 7506.64);
@@ -254,7 +257,7 @@ void prepare_local_vars(const ptr_Arrays &HostArraysPtr, int i, int j, int k, co
 //8. Вычисление детерминанта матрицы частных производных
 //9. Получение решения системы методом Крамера в явном виде
 #ifndef ENERGY
-void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void Newton(int i, int j, int k)
 {
 	if (INTERNAL_POINT)
 	{
@@ -264,14 +267,14 @@ void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &
 
 		for (int w = 1; w <= def.newton_iterations; w++)
 		{
-			S_w_e = assign_S_w_e(HostArraysPtr, local, def);
-			S_n_e = assign_S_n_e(HostArraysPtr, local, def);
+			S_w_e = assign_S_w_e(HostArraysPtr, local);
+			S_n_e = assign_S_n_e(HostArraysPtr, local);
 			S_g_e = 1. - S_w_e - S_n_e;
 
-			Pk_nw = assign_P_k_nw(S_w_e, def);
-			Pk_gn = assign_P_k_gn(S_g_e, def);
-			PkSw = assign_P_k_nw_S(S_w_e, def);
-			PkSn = assign_P_k_gn_S(S_g_e, def);
+			Pk_nw = assign_P_k_nw(S_w_e);
+			Pk_gn = assign_P_k_gn(S_g_e);
+			PkSw = assign_P_k_nw_S(S_w_e);
+			PkSn = assign_P_k_gn_S(S_g_e);
 
 			Sg = 1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local];
 
@@ -313,11 +316,11 @@ void Newton(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &
 //Задание граничных условий отдельно для (Sw,Sg),Pn
 
 // Задание граничных условий с меньшим числом проверок, но с введением дополнительных переменных
-void Border_S(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void Border_S(int i, int j, int k)
 {
 	if (BOUNDARY_POINT)
 	{
-		int local1 = set_boundary_basic_coordinate(i, j, k, def);
+		int local1 = set_boundary_basic_coordinate(i, j, k);
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 
 		if ((j != 0) || ((def.source) <= 0))
@@ -336,19 +339,19 @@ void Border_S(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 	}
 }
 
-void Border_P(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts &def)
+void Border_P(int i, int j, int k)
 {
 	if (BOUNDARY_POINT)
 	{
-		int local1 = set_boundary_basic_coordinate(i, j, k, def);
+		int local1 = set_boundary_basic_coordinate(i, j, k);
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
 
-		double S_w_e = assign_S_w_e(HostArraysPtr, local1, def);
-		double S_n_e = assign_S_n_e(HostArraysPtr, local1, def);
+		double S_w_e = assign_S_w_e(local1);
+		double S_n_e = assign_S_n_e(local1);
 		double S_g_e = 1. - S_w_e - S_n_e;
 
-		double Pk_nw = assign_P_k_nw(S_w_e, def);
-		double Pk_gn = assign_P_k_gn(S_g_e, def);
+		double Pk_nw = assign_P_k_nw(S_w_e);
+		double Pk_gn = assign_P_k_gn(S_g_e);
 
 		// Если отдельно задаем значения на границах через градиент (условия непротекания)
 		if ((j != 0) && (j != (def.locNy) - 1))
@@ -398,20 +401,20 @@ void Border_P(const ptr_Arrays &HostArraysPtr, int i, int j, int k, const consts
 }
 
 // Является ли точка нагнетательной скважиной
-int is_injection_well(int i, int j, int k, const consts &def)
+int is_injection_well(int i, int j, int k)
 {
 
 		return 0;
 }
 
 // Является ли точка добывающей скважиной
-int is_output_well(int i, int j, int k, const consts &def)
+int is_output_well(int i, int j, int k)
 {
 		return 0;
 }
 
 // Устанавливает значения втекаемых/вытекаемых жидкостей q_i на скважинах
-void wells_q(const ptr_Arrays &HostArraysPtr, int i, int j, int k, double* q_w, double* q_n, double* q_g, const consts &def)
+void wells_q(int i, int j, int k, double* q_w, double* q_n, double* q_g)
 {
 	*q_w = 0.0;
 	*q_g = 0.0;
