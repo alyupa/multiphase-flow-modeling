@@ -645,7 +645,7 @@ void device_finalization(void)
 }
 
 // Загрузка в буфер данных для обмена на границе. Для каждого из направлений своя функция. Направление - это ось координат и лево/право.
-void load_exchange_data_part_xl(double *HostArray, double *DevArray)
+void load_exchange_data_part_xl(double *HostArray)
 {
 	for (int j = 0; j < (def.locNy); j++)
 		for (int k = 0; k < (def.locNz); k++)
@@ -655,7 +655,7 @@ void load_exchange_data_part_xl(double *HostArray, double *DevArray)
 		}
 }
 
-void load_exchange_data_part_xr(double *HostArray, double *DevArray)
+void load_exchange_data_part_xr(double *HostArray)
 {
 	for (int j = 0; j < (def.locNy); j++)
 		for (int k = 0; k < (def.locNz); k++)
@@ -665,7 +665,7 @@ void load_exchange_data_part_xr(double *HostArray, double *DevArray)
 		}
 }
 
-void load_exchange_data_part_yl(double *HostArray, double *DevArray)
+void load_exchange_data_part_yl(double *HostArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int k = 0; k < (def.locNz); k++)
@@ -675,7 +675,7 @@ void load_exchange_data_part_yl(double *HostArray, double *DevArray)
 		}
 }
 
-void load_exchange_data_part_yr(double *HostArray, double *DevArray)
+void load_exchange_data_part_yr(double *HostArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int k = 0; k < (def.locNz); k++)
@@ -685,7 +685,7 @@ void load_exchange_data_part_yr(double *HostArray, double *DevArray)
 		}
 }
 
-void load_exchange_data_part_zl(double *HostArray, double *DevArray)
+void load_exchange_data_part_zl(double *HostArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
@@ -695,7 +695,7 @@ void load_exchange_data_part_zl(double *HostArray, double *DevArray)
 		}
 }
 
-void load_exchange_data_part_zr(double *HostArray, double *DevArray)
+void load_exchange_data_part_zr(double *HostArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
@@ -706,7 +706,7 @@ void load_exchange_data_part_zr(double *HostArray, double *DevArray)
 }
 
 // Загрузка из буфера данных обмена на границе. Для каждого из направлений своя функция. Направление - это ось координат и лево/право.
-void save_exchange_data_part_xl(double *HostArray, double *DevArray)
+void save_exchange_data_part_xl(double *HostArray)
 {
 	for (int j = 0; j < (def.locNy); j++)
 		for (int k = 0; k < (def.locNz); k++)
@@ -716,7 +716,7 @@ void save_exchange_data_part_xl(double *HostArray, double *DevArray)
 		}
 }
 
-void save_exchange_data_part_xr(double *HostArray, double *DevArray)
+void save_exchange_data_part_xr(double *HostArray)
 {
 	for (int j = 0; j < (def.locNy); j++)
 		for (int k = 0; k < (def.locNz); k++)
@@ -726,7 +726,7 @@ void save_exchange_data_part_xr(double *HostArray, double *DevArray)
 		}
 }
 
-void save_exchange_data_part_yl(double *HostArray, double *DevArray)
+void save_exchange_data_part_yl(double *HostArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int k = 0; k < (def.locNz); k++)
@@ -736,7 +736,7 @@ void save_exchange_data_part_yl(double *HostArray, double *DevArray)
 		}
 }
 
-void save_exchange_data_part_yr(double *HostArray, double *DevArray)
+void save_exchange_data_part_yr(double *HostArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int k = 0; k < (def.locNz); k++)
@@ -746,7 +746,7 @@ void save_exchange_data_part_yr(double *HostArray, double *DevArray)
 		}
 }
 
-void save_exchange_data_part_zl(double *HostArray, double *DevArray)
+void save_exchange_data_part_zl(double *HostArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)
@@ -756,7 +756,7 @@ void save_exchange_data_part_zl(double *HostArray, double *DevArray)
 		}
 }
 
-void save_exchange_data_part_zr(double *HostArray, double *DevArray)
+void save_exchange_data_part_zr(double *HostArray)
 {
 	for (int i = 0; i < (def.locNx); i++)
 		for (int j = 0; j < (def.locNy); j++)

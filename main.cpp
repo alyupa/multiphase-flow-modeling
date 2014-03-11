@@ -1,10 +1,8 @@
 #include "defines.h"
 
 double *HostBuffer;
-double *DevBuffer;
 consts def;
 ptr_Arrays HostArraysPtr;
-ptr_Arrays DevArraysPtr;
 
 int main(int argc, char* argv[])
 {
@@ -61,6 +59,7 @@ int main(int argc, char* argv[])
 
 	// Завершение работы и освобождение памяти
 	finalization();
+	printf("\n...THE END...\n");
 
 	// При запуске в Windows после работы программы оставлять окно консоли
 #ifdef _WIN32
@@ -277,20 +276,20 @@ void initialization(long int* time_counter, int argc, char* argv[])
 	memory_allocation(); // (3)
 
 	load_permeability(HostArraysPtr.K); // (5)
-	load_data_to_device(HostArraysPtr.K, DevArraysPtr.K);
 
 	data_initialization(time_counter);
 
-	load_data_to_device(HostArraysPtr.S_w, DevArraysPtr.S_w);
-	load_data_to_device(HostArraysPtr.roS_g_old, DevArraysPtr.roS_g_old);
-	load_data_to_device(HostArraysPtr.P_w, DevArraysPtr.P_w);
-	load_data_to_device(HostArraysPtr.S_n, DevArraysPtr.S_n);
-	load_data_to_device(HostArraysPtr.roS_w_old, DevArraysPtr.roS_w_old);
-	load_data_to_device(HostArraysPtr.roS_n_old, DevArraysPtr.roS_n_old);
-	load_data_to_device(HostArraysPtr.m, DevArraysPtr.m);
-	load_data_to_device(HostArraysPtr.K, DevArraysPtr.K);
+	load_data_to_device(HostArraysPtr.P_w, DevArraysPtrLoc->P_w);
+	load_data_to_device(HostArraysPtr.S_w, DevArraysPtrLoc->S_w);
+	load_data_to_device(HostArraysPtr.S_n, DevArraysPtrLoc->S_n);
+	load_data_to_device(HostArraysPtr.S_g, DevArraysPtrLoc->S_g);
+	load_data_to_device(HostArraysPtr.roS_w_old, DevArraysPtrLoc->roS_w_old);
+	load_data_to_device(HostArraysPtr.roS_n_old, DevArraysPtrLoc->roS_n_old);
+	load_data_to_device(HostArraysPtr.roS_g_old, DevArraysPtrLoc->roS_g_old);
+	load_data_to_device(HostArraysPtr.m, DevArraysPtrLoc->m);
+	load_data_to_device(HostArraysPtr.K, DevArraysPtrLoc->K);
 #ifdef ENERGY
-	load_data_to_device(HostArraysPtr.T, DevArraysPtr.T);
+	load_data_to_device(HostArraysPtr.T, DevArraysPtrLoc->T);
 #endif
 }
 
@@ -434,21 +433,21 @@ void host_memory_free()
 void save_data_plots(double t)
 {
 	// Загрузка в память хоста результатов расчета
-	load_data_to_host(HostArraysPtr.S_w, DevArraysPtr.S_w);
-	load_data_to_host(HostArraysPtr.ux_w, DevArraysPtr.ux_w);
-	load_data_to_host(HostArraysPtr.uy_w, DevArraysPtr.uy_w);
-	load_data_to_host(HostArraysPtr.uz_w, DevArraysPtr.uz_w);
-	load_data_to_host(HostArraysPtr.ux_g, DevArraysPtr.ux_g);
-	load_data_to_host(HostArraysPtr.uy_g, DevArraysPtr.uy_g);
-	load_data_to_host(HostArraysPtr.uz_g, DevArraysPtr.uz_g);
-	load_data_to_host(HostArraysPtr.P_w, DevArraysPtr.P_w);
-	load_data_to_host(HostArraysPtr.S_n, DevArraysPtr.S_n);
-	load_data_to_host(HostArraysPtr.S_g, DevArraysPtr.S_g);
-	load_data_to_host(HostArraysPtr.ux_n, DevArraysPtr.ux_n);
-	load_data_to_host(HostArraysPtr.uy_n, DevArraysPtr.uy_n);
-	load_data_to_host(HostArraysPtr.uz_n, DevArraysPtr.uz_n);
+	load_data_to_host(HostArraysPtr.S_w, DevArraysPtrLoc->S_w);
+	load_data_to_host(HostArraysPtr.ux_w, DevArraysPtrLoc->ux_w);
+	load_data_to_host(HostArraysPtr.uy_w, DevArraysPtrLoc->uy_w);
+	load_data_to_host(HostArraysPtr.uz_w, DevArraysPtrLoc->uz_w);
+	load_data_to_host(HostArraysPtr.ux_g, DevArraysPtrLoc->ux_g);
+	load_data_to_host(HostArraysPtr.uy_g, DevArraysPtrLoc->uy_g);
+	load_data_to_host(HostArraysPtr.uz_g, DevArraysPtrLoc->uz_g);
+	load_data_to_host(HostArraysPtr.P_w, DevArraysPtrLoc->P_w);
+	load_data_to_host(HostArraysPtr.S_n, DevArraysPtrLoc->S_n);
+	load_data_to_host(HostArraysPtr.S_g, DevArraysPtrLoc->S_g);
+	load_data_to_host(HostArraysPtr.ux_n, DevArraysPtrLoc->ux_n);
+	load_data_to_host(HostArraysPtr.uy_n, DevArraysPtrLoc->uy_n);
+	load_data_to_host(HostArraysPtr.uz_n, DevArraysPtrLoc->uz_n);
 #ifdef ENERGY
-	load_data_to_host(HostArraysPtr.T, DevArraysPtr.T);
+	load_data_to_host(HostArraysPtr.T, DevArraysPtrLoc->T);
 #endif
 
 	// Проверка на выход из допустимого диапазона значений P и S

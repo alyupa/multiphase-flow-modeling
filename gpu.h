@@ -18,7 +18,7 @@
 			|| ((((gpu_def->rankz) != 0 && k == 0) || ((gpu_def->rankz) != (gpu_def->sizez) - 1 && k == (gpu_def->locNz) - 1)) && (gpu_def->Nz) >= 2))))
 
 // Point is internal condition
-#define GPU_INTERNAL_POINT (((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) \
+#define GPU_INTERNAL_POINT (((((i != 0) && (i != (gpu_def->locNx) - 1)) || ((gpu_def->locNx) < 2)) && (j != 0) && (j != (gpu_def->locNy) - 1) \
 		&& (((k != 0) && (k != (gpu_def->locNz) - 1)) || ((gpu_def->locNz) < 2))) && GPU_ACTIVE_POINT)
 
 // Point is on boundary
@@ -26,16 +26,16 @@
 		|| (((k == 0) || (k == (gpu_def->locNz) - 1)) && ((gpu_def->locNz) >= 2))) && GPU_ACTIVE_POINT)
 
 __device__ int device_local_to_global(int local_index, char axis);
-__device__ double device_ro_eff_gdy(ptr_Arrays DevArraysPtr, int local);
+__device__ double device_ro_eff_gdy(int local);
 __device__ int device_set_boundary_basic_coordinate(int i, int j, int k);
 __device__ int device_is_injection_well(int i, int j, int k);
 __device__ int device_is_output_well(int i, int j, int k);
 __device__ void device_assing_k(double* k_w, double* k_n, double S_w);
-__device__ void device_assign_S(ptr_Arrays DevArraysPtr, int local);
-__device__ void device_assign_ro(ptr_Arrays DevArraysPtr, int local);
+__device__ void device_assign_S(int local);
+__device__ void device_assign_ro(int local);
 #ifdef ENERGY
-__device__ void device_assign_H(ptr_Arrays DevArraysPtr, int local);
-__device__ void device_assign_E_current(ptr_Arrays DevArraysPtr, int local);
+__device__ void device_assign_H(int local);
+__device__ void device_assign_E_current(int local);
 #endif
 
 #endif

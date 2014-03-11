@@ -100,3 +100,15 @@ __device__ void device_test_ro(double ro, const char *file, int line)
 	}
 #endif
 }
+
+// Функция проверяет, что первый аргумент много больше (по модулю) второго
+// Если это не так, печатается предупреждение
+__device__ void device_test_arrowhead(double big, double small, const char *file, int line)
+{
+#ifdef MY_TEST_1
+	if (fabs(big / 30) < fabs(small))
+	{
+		CUPRINTF("Warning: See task parameters.\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+	}
+#endif
+}

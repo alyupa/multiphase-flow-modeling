@@ -8,14 +8,14 @@ __constant__ double S_w_range[2] = {0.1, 0.99};
 __constant__ double S_g_range[2] = {0.005, 0.95};
 
 // Функции вычисления эффективных значений насыщенностей
-__device__ double device_assign_S_w_e(ptr_Arrays DevArraysPtr, int local)
+__device__ double device_assign_S_w_e(int local)
 {
-	return (DevArraysPtr.S_w[local] - gpu_def->S_wr[media]) / (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
+	return (DevArraysPtr->S_w[local] - gpu_def->S_wr[media]) / (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
 }
 
-__device__ double device_assign_S_n_e(ptr_Arrays DevArraysPtr, int local)
+__device__ double device_assign_S_n_e(int local)
 {
-	return (DevArraysPtr.S_n[local] - gpu_def->S_nr[media]) / (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
+	return (DevArraysPtr->S_n[local] - gpu_def->S_nr[media]) / (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
 }
 
 // Вычисление капиллярных давлений
@@ -199,7 +199,7 @@ __device__ double device_assign_k_n(double S_w_e, double S_n_e)
 //6. Вычисление фазовых давлений c помощью капиллярных
 //7. Вычисление коэффициентов закона Дарси
 
-__global__ void prepare_local_vars_kernel(ptr_Arrays DevArraysPtr)
+__global__ void prepare_local_vars_kernel()
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -211,10 +211,10 @@ __global__ void prepare_local_vars_kernel(ptr_Arrays DevArraysPtr)
 		double k_w, k_g, k_n, Pk_nw, Pk_gn;
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
-		device_assign_S(DevArraysPtr, local);
+		device_assign_S(local);
 
-		double S_w_e = device_assign_S_w_e(DevArraysPtr, local);
-		double S_n_e = device_assign_S_n_e(DevArraysPtr, local);
+		double S_w_e = device_assign_S_w_e(local);
+		double S_n_e = device_assign_S_n_e(local);
 		double S_g_e = 1. - S_w_e - S_n_e;
 
 		k_w = device_assign_k_w(S_w_e);
@@ -224,34 +224,34 @@ __global__ void prepare_local_vars_kernel(ptr_Arrays DevArraysPtr)
 		Pk_nw = device_assign_P_k_nw(S_w_e);
 		Pk_gn = device_assign_P_k_gn(S_g_e);
 
-		DevArraysPtr.P_n[local] = DevArraysPtr.P_w[local] + Pk_nw;
-		DevArraysPtr.P_g[local] = DevArraysPtr.P_n[local] + Pk_gn;
+		DevArraysPtr->P_n[local] = DevArraysPtr->P_w[local] + Pk_nw;
+		DevArraysPtr->P_g[local] = DevArraysPtr->P_n[local] + Pk_gn;
 
-		device_assign_ro(DevArraysPtr, local);
+		device_assign_ro(local);
 
 #ifdef ENERGY
-		device_assign_H(DevArraysPtr, local);
-		device_assign_E_current(DevArraysPtr, local);
+		device_assign_H(local);
+		device_assign_E_current(local);
 
 		// Вынести в константы!!!
-		double mu_w = 1. / (29.21 * DevArraysPtr.T[local] - 7506.64);
-		double mu_n = 7.256E-10 * exp(4141.9 / DevArraysPtr.T[local]);
-		double mu_g = 1.717E-5 * pow((DevArraysPtr.T[local] / 273.), 0.683);
+		double mu_w = 1. / (29.21 * DevArraysPtr->T[local] - 7506.64);
+		double mu_n = 7.256E-10 * exp(4141.9 / DevArraysPtr->T[local]);
+		double mu_g = 1.717E-5 * pow((DevArraysPtr->T[local] / 273.), 0.683);
 
-		DevArraysPtr.Xi_w[local] = (-1.) * (gpu_def->K[media]) * k_w / mu_w;
-		DevArraysPtr.Xi_n[local] = (-1.) * (gpu_def->K[media]) * k_n / mu_n;
-		DevArraysPtr.Xi_g[local] = (-1.) * (gpu_def->K[media]) * k_g / mu_g;
+		DevArraysPtr->Xi_w[local] = (-1.) * (gpu_def->K[media]) * k_w / mu_w;
+		DevArraysPtr->Xi_n[local] = (-1.) * (gpu_def->K[media]) * k_n / mu_n;
+		DevArraysPtr->Xi_g[local] = (-1.) * (gpu_def->K[media]) * k_g / mu_g;
 #else
-		DevArraysPtr.Xi_w[local] = (-1.) * (gpu_def->K[media]) * k_w / gpu_def->mu_w;
-		DevArraysPtr.Xi_n[local] = (-1.) * (gpu_def->K[media]) * k_n / gpu_def->mu_n;
-		DevArraysPtr.Xi_g[local] = (-1.) * (gpu_def->K[media]) * k_g / gpu_def->mu_g;
+		DevArraysPtr->Xi_w[local] = (-1.) * (gpu_def->K[media]) * k_w / gpu_def->mu_w;
+		DevArraysPtr->Xi_n[local] = (-1.) * (gpu_def->K[media]) * k_n / gpu_def->mu_n;
+		DevArraysPtr->Xi_g[local] = (-1.) * (gpu_def->K[media]) * k_g / gpu_def->mu_g;
 #endif
 
-		device_test_positive(DevArraysPtr.P_n[local], __FILE__, __LINE__);
-		device_test_positive(DevArraysPtr.P_g[local], __FILE__, __LINE__);
-		device_test_nan(DevArraysPtr.Xi_w[local], __FILE__, __LINE__);
-		device_test_nan(DevArraysPtr.Xi_n[local], __FILE__, __LINE__);
-		device_test_nan(DevArraysPtr.Xi_g[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr->P_n[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr->P_g[local], __FILE__, __LINE__);
+		device_test_nan(DevArraysPtr->Xi_w[local], __FILE__, __LINE__);
+		device_test_nan(DevArraysPtr->Xi_n[local], __FILE__, __LINE__);
+		device_test_nan(DevArraysPtr->Xi_g[local], __FILE__, __LINE__);
 	}
 }
 
@@ -266,7 +266,7 @@ __global__ void prepare_local_vars_kernel(ptr_Arrays DevArraysPtr)
 //8. Вычисление детерминанта матрицы частных производных
 //9. Получение решения системы методом Крамера в явном виде
 #ifndef ENERGY
-__global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
+__global__ void Newton_method_kernel()
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -290,39 +290,39 @@ __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 			PkSw = device_assign_P_k_nw_S(S_w_e);
 			PkSn = device_assign_P_k_gn_S(S_g_e);
 
-			Sg = 1. - DevArraysPtr.S_w[local] - DevArraysPtr.S_n[local];
+			Sg = 1. - DevArraysPtr->S_w[local] - DevArraysPtr->S_n[local];
 
-			F1 = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (DevArraysPtr.P_w[local] - gpu_def->P_atm))
-			     * DevArraysPtr.S_w[local] - DevArraysPtr.roS_w[local];
-			F2 = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (DevArraysPtr.P_w[local] + Pk_nw - gpu_def->P_atm))
-			     * DevArraysPtr.S_n[local] - DevArraysPtr.roS_n[local];
-			F3 = gpu_def->ro0_g * (DevArraysPtr.P_w[local] + Pk_nw + Pk_gn) / gpu_def->P_atm
-			     * Sg - DevArraysPtr.roS_g[local];
+			F1 = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (DevArraysPtr->P_w[local] - gpu_def->P_atm))
+			     * DevArraysPtr->S_w[local] - DevArraysPtr->roS_w[local];
+			F2 = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (DevArraysPtr->P_w[local] + Pk_nw - gpu_def->P_atm))
+			     * DevArraysPtr->S_n[local] - DevArraysPtr->roS_n[local];
+			F3 = gpu_def->ro0_g * (DevArraysPtr->P_w[local] + Pk_nw + Pk_gn) / gpu_def->P_atm
+			     * Sg - DevArraysPtr->roS_g[local];
 
 			// Матрица частных производных. Индексу от 0 до 8 соответствуют F1P, F1Sw, F1Sn, F2P, F2Sw, F2Sn, F3P, F3Sw, F3Sn
-			dF[0] = gpu_def->ro0_w * gpu_def->beta_w * DevArraysPtr.S_w[local];
-			dF[3] = gpu_def->ro0_n * gpu_def->beta_n * DevArraysPtr.S_n[local];
+			dF[0] = gpu_def->ro0_w * gpu_def->beta_w * DevArraysPtr->S_w[local];
+			dF[3] = gpu_def->ro0_n * gpu_def->beta_n * DevArraysPtr->S_n[local];
 			dF[6] = gpu_def->ro0_g * Sg / gpu_def->P_atm;
-			dF[1] = gpu_def->ro0_w * (1 + gpu_def->beta_w * (DevArraysPtr.P_w[local] - gpu_def->P_atm));
-			dF[4] = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * PkSw) * DevArraysPtr.S_n[local];
-			dF[7] = (-1) * gpu_def->ro0_g * (DevArraysPtr.P_w[local] + Pk_nw + Pk_gn - Sg * (PkSn + PkSw)) / gpu_def->P_atm;
+			dF[1] = gpu_def->ro0_w * (1 + gpu_def->beta_w * (DevArraysPtr->P_w[local] - gpu_def->P_atm));
+			dF[4] = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * PkSw) * DevArraysPtr->S_n[local];
+			dF[7] = (-1) * gpu_def->ro0_g * (DevArraysPtr->P_w[local] + Pk_nw + Pk_gn - Sg * (PkSn + PkSw)) / gpu_def->P_atm;
 			dF[2] = 0;
-			dF[5] = gpu_def->ro0_n * (1. + gpu_def->beta_n * (DevArraysPtr.P_w[local] + Pk_nw - gpu_def->P_atm));
-			dF[8] = (-1) * gpu_def->ro0_g * (DevArraysPtr.P_w[local] + Pk_nw + Pk_gn - Sg * PkSn) / gpu_def->P_atm;
+			dF[5] = gpu_def->ro0_n * (1. + gpu_def->beta_n * (DevArraysPtr->P_w[local] + Pk_nw - gpu_def->P_atm));
+			dF[8] = (-1) * gpu_def->ro0_g * (DevArraysPtr->P_w[local] + Pk_nw + Pk_gn - Sg * PkSn) / gpu_def->P_atm;
 
 			device_reverse_matrix(dF);
 
-			DevArraysPtr.P_w[local] = DevArraysPtr.P_w[local]
+			DevArraysPtr->P_w[local] = DevArraysPtr->P_w[local]
 			        - (dF[0] * F1 + dF[1] * F2 + dF[2] * F3);
-			DevArraysPtr.S_w[local] = DevArraysPtr.S_w[local]
+			DevArraysPtr->S_w[local] = DevArraysPtr->S_w[local]
 			        - (dF[3] * F1 + dF[4] * F2 + dF[5] * F3);
-			DevArraysPtr.S_n[local] = DevArraysPtr.S_n[local]
+			DevArraysPtr->S_n[local] = DevArraysPtr->S_n[local]
 			        - (dF[6] * F1 + dF[7] * F2 + dF[8] * F3);
 		}
 
-		device_test_S(DevArraysPtr.S_w[local], __FILE__, __LINE__);
-		device_test_S(DevArraysPtr.S_n[local], __FILE__, __LINE__);
-		device_test_positive(DevArraysPtr.P_w[local], __FILE__, __LINE__);
+		device_test_S(DevArraysPtr->S_w[local], __FILE__, __LINE__);
+		device_test_S(DevArraysPtr->S_n[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr->P_w[local], __FILE__, __LINE__);
 	}
 }
 #endif
@@ -330,7 +330,7 @@ __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 //Задание граничных условий отдельно для (Sw,Sg),Pn
 
 // Задание граничных условий с меньшим числом проверок, но с введением дополнительных переменных
-__global__ void Border_S_kernel(ptr_Arrays DevArraysPtr)
+__global__ void Border_S_kernel()
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -343,21 +343,21 @@ __global__ void Border_S_kernel(ptr_Arrays DevArraysPtr)
 
 		if ((j != 0) || ((gpu_def->source) <= 0))
 		{
-			DevArraysPtr.S_w[local] = DevArraysPtr.S_w[local1];
-			DevArraysPtr.S_n[local] = DevArraysPtr.S_n[local1];
+			DevArraysPtr->S_w[local] = DevArraysPtr->S_w[local1];
+			DevArraysPtr->S_n[local] = DevArraysPtr->S_n[local1];
 		}
 
 		if ((j == 0) && ((gpu_def->source) > 0))
 		{
-			DevArraysPtr.S_w[local] = gpu_def->S_w_gr;
-			DevArraysPtr.S_n[local] = gpu_def->S_n_gr;
+			DevArraysPtr->S_w[local] = gpu_def->S_w_gr;
+			DevArraysPtr->S_n[local] = gpu_def->S_n_gr;
 		}
-		device_test_S(DevArraysPtr.S_w[local], __FILE__, __LINE__);
-		device_test_S(DevArraysPtr.S_n[local], __FILE__, __LINE__);
+		device_test_S(DevArraysPtr->S_w[local], __FILE__, __LINE__);
+		device_test_S(DevArraysPtr->S_n[local], __FILE__, __LINE__);
 	}
 }
 
-__global__ void Border_P_kernel(ptr_Arrays DevArraysPtr)
+__global__ void Border_P_kernel()
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -368,8 +368,8 @@ __global__ void Border_P_kernel(ptr_Arrays DevArraysPtr)
 		int local1 = device_set_boundary_basic_coordinate(i, j, k);
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
 
-		double S_w_e = device_assign_S_w_e(DevArraysPtr, local1);
-		double S_n_e = device_assign_S_n_e(DevArraysPtr, local1);
+		double S_w_e = device_assign_S_w_e(local1);
+		double S_n_e = device_assign_S_n_e(local1);
 		double S_g_e = 1. - S_w_e - S_n_e;
 
 		double P_k_nw = device_assign_P_k_nw(S_w_e);
@@ -378,9 +378,9 @@ __global__ void Border_P_kernel(ptr_Arrays DevArraysPtr)
 		// Если отдельно задаем значения на границах через градиент (условия непротекания)
 		if ((j != 0) && (j != (gpu_def->locNy) - 1))
 		{
-			DevArraysPtr.P_w[local] = DevArraysPtr.P_w[local1];
-			DevArraysPtr.P_n[local] = DevArraysPtr.P_w[local1] + P_k_nw;
-			DevArraysPtr.P_g[local] = DevArraysPtr.P_w[local1] + P_k_nw + P_k_gn;
+			DevArraysPtr->P_w[local] = DevArraysPtr->P_w[local1];
+			DevArraysPtr->P_n[local] = DevArraysPtr->P_w[local1] + P_k_nw;
+			DevArraysPtr->P_g[local] = DevArraysPtr->P_w[local1] + P_k_nw + P_k_gn;
 		
 		}
 		else if (j == 0)
@@ -388,37 +388,37 @@ __global__ void Border_P_kernel(ptr_Arrays DevArraysPtr)
 			/*if((i > 0) && (i < (gpu_def->locNx) / 3 - 1) && (((gpu_def->locNz) < 2) || (k > 0) && (k < (gpu_def->locNz) / 3 - 1)))
 			{
 				//Открытая верхняя граница
-				DevArraysPtr.P_w[local] = gpu_def->P_atm;
-				DevArraysPtr.P_n[local] = gpu_def->P_atm;
-				DevArraysPtr.P_g[local] = gpu_def->P_atm;
+				DevArraysPtr->P_w[local] = gpu_def->P_atm;
+				DevArraysPtr->P_n[local] = gpu_def->P_atm;
+				DevArraysPtr->P_g[local] = gpu_def->P_atm;
 			}
 			else*/
 			{
 				// Условия непротекания
-				DevArraysPtr.P_w[local] = (DevArraysPtr.P_w[local1]
+				DevArraysPtr->P_w[local] = (DevArraysPtr->P_w[local1]
 				- (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy) * (1. - (gpu_def->beta_w) * (gpu_def->P_atm))) 
 					/ (1. + (gpu_def->beta_w) * (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy));
-				DevArraysPtr.P_n[local] = (DevArraysPtr.P_w[local1]
+				DevArraysPtr->P_n[local] = (DevArraysPtr->P_w[local1]
 				+ P_k_nw - (gpu_def->ro0_n) * (gpu_def->g_const) * (gpu_def->hy) * (1. - (gpu_def->beta_n) * (gpu_def->P_atm))) 
 					/ (1. + (gpu_def->beta_n) * (gpu_def->ro0_n) * (gpu_def->g_const) * (gpu_def->hy));
-				DevArraysPtr.P_g[local] = (DevArraysPtr.P_w[local1]
+				DevArraysPtr->P_g[local] = (DevArraysPtr->P_w[local1]
 				+ P_k_nw + P_k_gn) / (1. + (gpu_def->ro0_g) * (gpu_def->g_const) * (gpu_def->hy) / (gpu_def->P_atm));
 			}
 		}
 		else
 		{
-			DevArraysPtr.P_w[local] = (DevArraysPtr.P_w[local1]
+			DevArraysPtr->P_w[local] = (DevArraysPtr->P_w[local1]
 			+ (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy) * (1. - (gpu_def->beta_w) * (gpu_def->P_atm))) 
 				/ (1. - (gpu_def->beta_w) * (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy));
-			DevArraysPtr.P_n[local] = (DevArraysPtr.P_w[local1]
+			DevArraysPtr->P_n[local] = (DevArraysPtr->P_w[local1]
 			+ P_k_nw + (gpu_def->ro0_n) * (gpu_def->g_const) * (gpu_def->hy) * (1. - (gpu_def->beta_n) * (gpu_def->P_atm))) 
 				/ (1. - (gpu_def->beta_n) * (gpu_def->ro0_n) * (gpu_def->g_const) * (gpu_def->hy));
-			DevArraysPtr.P_g[local] = (DevArraysPtr.P_w[local1]
+			DevArraysPtr->P_g[local] = (DevArraysPtr->P_w[local1]
 			+ P_k_nw + P_k_gn) / (1. - (gpu_def->ro0_g) * (gpu_def->g_const) * (gpu_def->hy) / (gpu_def->P_atm));
 		}
-		device_test_positive(DevArraysPtr.P_w[local], __FILE__, __LINE__);
-		device_test_positive(DevArraysPtr.P_n[local], __FILE__, __LINE__);
-		device_test_positive(DevArraysPtr.P_g[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr->P_w[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr->P_n[local], __FILE__, __LINE__);
+		device_test_positive(DevArraysPtr->P_g[local], __FILE__, __LINE__);
 	}
 }
 
@@ -435,7 +435,7 @@ __device__ int device_is_output_well(int i, int j, int k)
 }
 
 // Устанавливает значения втекаемых/вытекаемых жидкостей q_i на скважинах
-__device__ void device_wells_q(ptr_Arrays DevArraysPtr, int i, int j, int k, double* q_w, double* q_n, double* q_g)
+__device__ void device_wells_q(int i, int j, int k, double* q_w, double* q_n, double* q_g)
 {
 	*q_w = 0.0;
 	*q_g = 0.0;

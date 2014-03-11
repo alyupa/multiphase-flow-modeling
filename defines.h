@@ -70,7 +70,7 @@ struct ptr_Arrays_tag
 typedef struct ptr_Arrays_tag ptr_Arrays;
 
 extern ptr_Arrays HostArraysPtr;
-extern ptr_Arrays DevArraysPtr;
+extern ptr_Arrays DevArraysPtrLoc[1];
 
 /*! 
  *  \brief     Структура параметров сред и характерных размеров задачи.
@@ -182,18 +182,18 @@ void solve_nonlinear_system();
 void boundary_conditions();
 void exchange_basic_vars();
 
-void load_exchange_data_part_xl(double *HostArray, double *DevArray);
-void load_exchange_data_part_xr(double *HostArray, double *DevArray);
-void load_exchange_data_part_yl(double *HostArray, double *DevArray);
-void load_exchange_data_part_yr(double *HostArray, double *DevArray);
-void load_exchange_data_part_zl(double *HostArray, double *DevArray);
-void load_exchange_data_part_zr(double *HostArray, double *DevArray);
-void save_exchange_data_part_xl(double *HostArray, double *DevArray);
-void save_exchange_data_part_xr(double *HostArray, double *DevArray);
-void save_exchange_data_part_yl(double *HostArray, double *DevArray);
-void save_exchange_data_part_yr(double *HostArray, double *DevArray);
-void save_exchange_data_part_zl(double *HostArray, double *DevArray);
-void save_exchange_data_part_zr(double *HostArray, double *DevArray);
+void load_exchange_data_part_xl(double *Array);
+void load_exchange_data_part_xr(double *Array);
+void load_exchange_data_part_yl(double *Array);
+void load_exchange_data_part_yr(double *Array);
+void load_exchange_data_part_zl(double *Array);
+void load_exchange_data_part_zr(double *Array);
+void save_exchange_data_part_xl(double *Array);
+void save_exchange_data_part_xr(double *Array);
+void save_exchange_data_part_yl(double *Array);
+void save_exchange_data_part_yr(double *Array);
+void save_exchange_data_part_zl(double *Array);
+void save_exchange_data_part_zr(double *Array);
 
 int is_injection_well(int i, int j, int k);
 int is_output_well(int i, int j, int k);
