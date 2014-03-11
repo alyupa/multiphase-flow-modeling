@@ -373,16 +373,12 @@ void Newton(int i, int j, int k)
 {
 	if (INTERNAL_POINT)
 	{
-		int n = 5; // Размерность системы
-		double *F; // Вектор значений функций (из системы уравнений)
-		double *correction; // Вектор поправок к функциям
-		double *dF; // Матрица Якоби (в виде одномерного массива)
+		enum { n = 5 }; // Размерность системы
+		double F[n]; // Вектор значений функций (из системы уравнений)
+		double correction[n]; // Вектор поправок к функциям
+		double dF[n*n]; // Матрица Якоби (в виде одномерного массива)
 
 		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
-		
-		F = new double [n];
-		correction = new double [n];
-		dF = new double [n * n];
 
 		for (int w = 1; w <= def.newton_iterations; w++)
 		{
@@ -451,10 +447,6 @@ void Newton(int i, int j, int k)
 		// Обновление значения суммарной энергии, т.к. оно больше не понадобится
 		// !!! Лучше вынести в отдельную функцию (просто обменять указатели).
 		HostArraysPtr.E[local] = HostArraysPtr.E_new[local];
-
-		delete[] F;
-		delete[] correction;
-		delete[] dF;
 
 		test_S(HostArraysPtr.S_w[local], __FILE__, __LINE__);
 		test_S(HostArraysPtr.S_n[local], __FILE__, __LINE__);

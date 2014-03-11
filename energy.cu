@@ -384,16 +384,12 @@ __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 	
 	if (GPU_INTERNAL_POINT)
 	{
-		int n = 5; // Размерность системы
-		double *F; // Вектор значений функций (из системы уравнений)
-		double *correction; // Вектор поправок к функциям
-		double *dF; // Матрица Якоби (в виде одномерного массива)
+		enum { n = 5 }; // Размерность системы
+		double F[n]; // Вектор значений функций (из системы уравнений)
+		double correction[n]; // Вектор поправок к функциям
+		double dF[n*n]; // Матрица Якоби (в виде одномерного массива)
 
 		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
-		
-		F = new double [n];
-		correction = new double [n];
-		dF = new double [n * n];
 
 		for (int w = 1; w <= gpu_def->newton_iterations; w++)
 		{
@@ -462,10 +458,6 @@ __global__ void Newton_method_kernel(ptr_Arrays DevArraysPtr)
 		// Обновление значения суммарной энергии, т.к. оно больше не понадобится
 		// !!! Лучше вынести в отдельную функцию (просто обменять указатели).
 		DevArraysPtr.E[local] = DevArraysPtr.E_new[local];
-
-		delete[] F;
-		delete[] correction;
-		delete[] dF;
 
 		device_test_S(DevArraysPtr.S_w[local], __FILE__, __LINE__);
 		device_test_S(DevArraysPtr.S_n[local], __FILE__, __LINE__);
