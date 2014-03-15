@@ -3,6 +3,7 @@
 double *HostBuffer;
 consts def;
 ptr_Arrays HostArraysPtr;
+ptr_Arrays DevArraysPtrLoc[1];
 
 int main(int argc, char* argv[])
 {

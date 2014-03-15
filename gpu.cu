@@ -4,7 +4,6 @@
 __constant__ consts gpu_def [1];
 __device__ ptr_Arrays DevArraysPtr[1];
 __device__ double *DevBuffer;
-ptr_Arrays DevArraysPtrLoc[1];
 double *DevBufferLoc;
 extern double *HostBuffer;
 

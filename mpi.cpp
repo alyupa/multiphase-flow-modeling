@@ -113,7 +113,7 @@ static void left_recv_send(int buffer_size, int destination_rank, int send_recv_
 // Для крайних процессоров соответствующие обмены не требуются
 // 3. Загружаем полученные данные в память ускорителя
 
-static void exchange_direct(double* HostArray, double* DevArray, char axis)
+static void exchange_direct(double* HostArray, char axis)
 {
 	if((def.rank) >= (def.sizex) * (def.sizey) * (def.sizez))
 		return;
@@ -127,32 +127,32 @@ static void exchange_direct(double* HostArray, double* DevArray, char axis)
 			{
 				if ((def.rankx) != (def.sizex) - 1)
 				{
-					load_exchange_data_part_xr(HostArray, DevArray); // (0)
+					load_exchange_data_part_xr(HostArray); // (0)
 					right_send_recv((def.locNy) * (def.locNz), (def.rank) + 1, 500);    // (1.1)
-					save_exchange_data_part_xr(HostArray, DevArray); // (3)
+					save_exchange_data_part_xr(HostArray); // (3)
 				}
 
 				if ((def.rankx) != 0)
 				{
-					load_exchange_data_part_xl(HostArray, DevArray); // (0)
+					load_exchange_data_part_xl(HostArray); // (0)
 					left_recv_send((def.locNy) * (def.locNz), (def.rank) - 1, 502);    // (1.2)
-					save_exchange_data_part_xl(HostArray, DevArray); // (3)
+					save_exchange_data_part_xl(HostArray); // (3)
 				}
 			}
 			else
 			{
 				if ((def.rankx) != 0) // В принципе, лишняя проверка
 				{
-					load_exchange_data_part_xl(HostArray, DevArray); // (0)
+					load_exchange_data_part_xl(HostArray); // (0)
 					left_recv_send((def.locNy) * (def.locNz), (def.rank) - 1, 500);    // (2.1)
-					save_exchange_data_part_xl(HostArray, DevArray); // (3)
+					save_exchange_data_part_xl(HostArray); // (3)
 				}
 
 				if ((def.rankx) != (def.sizex) - 1)
 				{
-					load_exchange_data_part_xr(HostArray, DevArray); // (0)
+					load_exchange_data_part_xr(HostArray); // (0)
 					right_send_recv((def.locNy) * (def.locNz), (def.rank) + 1, 502);    // (2.2)
-					save_exchange_data_part_xr(HostArray, DevArray); // (3)
+					save_exchange_data_part_xr(HostArray); // (3)
 				}
 			}
 		}
@@ -164,32 +164,32 @@ static void exchange_direct(double* HostArray, double* DevArray, char axis)
 			{
 				if ((def.ranky) != (def.sizey) - 1)
 				{
-					load_exchange_data_part_yr(HostArray, DevArray); // (0)
+					load_exchange_data_part_yr(HostArray); // (0)
 					right_send_recv((def.locNx) * (def.locNz), (def.rank) + (def.sizex), 504);    // (1.1)
-					save_exchange_data_part_yr(HostArray, DevArray); // (3)
+					save_exchange_data_part_yr(HostArray); // (3)
 				}
 
 				if ((def.ranky) != 0)
 				{
-					load_exchange_data_part_yl(HostArray, DevArray); // (0)
+					load_exchange_data_part_yl(HostArray); // (0)
 					left_recv_send((def.locNx) * (def.locNz), (def.rank) - (def.sizex), 506);    // (1.2)
-					save_exchange_data_part_yl(HostArray, DevArray); // (3)
+					save_exchange_data_part_yl(HostArray); // (3)
 				}
 			}
 			else
 			{
 				if ((def.ranky) != 0) // В принципе, лишняя проверка
 				{
-					load_exchange_data_part_yl(HostArray, DevArray); // (0)
+					load_exchange_data_part_yl(HostArray); // (0)
 					left_recv_send((def.locNx) * (def.locNz), (def.rank) - (def.sizex), 504);    // (2.1)
-					save_exchange_data_part_yl(HostArray, DevArray); // (3)
+					save_exchange_data_part_yl(HostArray); // (3)
 				}
 
 				if ((def.ranky) != (def.sizey) - 1)
 				{
-					load_exchange_data_part_yr(HostArray, DevArray); // (0)
+					load_exchange_data_part_yr(HostArray); // (0)
 					right_send_recv((def.locNx) * (def.locNz), (def.rank) + (def.sizex), 506);    // (2.2)
-					save_exchange_data_part_yr(HostArray, DevArray); // (3)
+					save_exchange_data_part_yr(HostArray); // (3)
 				}
 			}
 		}
@@ -201,32 +201,32 @@ static void exchange_direct(double* HostArray, double* DevArray, char axis)
 			{
 				if ((def.rankz) != (def.sizez) - 1)
 				{
-					load_exchange_data_part_zr(HostArray, DevArray); // (0)
+					load_exchange_data_part_zr(HostArray); // (0)
 					right_send_recv((def.locNx) * (def.locNy), (def.rank) + (def.sizex) * (def.sizey), 508);    // (1.1)
-					save_exchange_data_part_zr(HostArray, DevArray); // (3)
+					save_exchange_data_part_zr(HostArray); // (3)
 				}
 
 				if ((def.rankz) != 0)
 				{
-					load_exchange_data_part_zl(HostArray, DevArray); // (0)
+					load_exchange_data_part_zl(HostArray); // (0)
 					left_recv_send((def.locNx) * (def.locNy), (def.rank) - (def.sizex) * (def.sizey), 510);    // (1.2)
-					save_exchange_data_part_zl(HostArray, DevArray); // (3)
+					save_exchange_data_part_zl(HostArray); // (3)
 				}
 			}
 			else
 			{
 				if ((def.rankz) != 0) // В принципе, лишняя проверка
 				{
-					load_exchange_data_part_zl(HostArray, DevArray); // (0)
+					load_exchange_data_part_zl(HostArray); // (0)
 					left_recv_send((def.locNx) * (def.locNy), (def.rank) - (def.sizex) * (def.sizey), 508);    // (2.1)
-					save_exchange_data_part_zl(HostArray, DevArray); // (3)
+					save_exchange_data_part_zl(HostArray); // (3)
 				}
 
 				if ((def.rankz) != (def.sizez) - 1)
 				{
-					load_exchange_data_part_zr(HostArray, DevArray); // (0)
+					load_exchange_data_part_zr(HostArray); // (0)
 					right_send_recv((def.locNx) * (def.locNy), (def.rank) + (def.sizex) * (def.sizey), 510);    // (2.2)
-					save_exchange_data_part_zr(HostArray, DevArray); // (3)
+					save_exchange_data_part_zr(HostArray); // (3)
 				}
 			}
 		}
@@ -236,21 +236,21 @@ static void exchange_direct(double* HostArray, double* DevArray, char axis)
 	}
 }
 
-void exchange(double* HostArray, double* DevArray)
+void exchange(double* HostArray)
 {
-	exchange_direct(HostArray, DevArray, 'x');
-	exchange_direct(HostArray, DevArray, 'y');
-	exchange_direct(HostArray, DevArray, 'z');
+	exchange_direct(HostArray, 'x');
+	exchange_direct(HostArray, 'y');
+	exchange_direct(HostArray, 'z');
 }
 
 // Обмен граничными значениями
 void exchange_basic_vars()
 {
-	exchange(HostArraysPtr.P_w, DevArraysPtr.P_w);
-	exchange(HostArraysPtr.S_n, DevArraysPtr.S_n);
-	exchange(HostArraysPtr.S_w, DevArraysPtr.S_w);
+	exchange(HostArraysPtr.P_w);
+	exchange(HostArraysPtr.S_n);
+	exchange(HostArraysPtr.S_w);
 #ifdef ENERGY
-	exchange(HostArraysPtr.T, DevArraysPtr.T);
+	exchange(HostArraysPtr.T);
 #endif
 }
 
