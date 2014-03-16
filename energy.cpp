@@ -2,74 +2,46 @@
 
 extern consts def;
 
-// !!! Нужно потом будет вынести в структуру констант
-// Базовая температура
-double T_0 = 273.; // К
-// Плотность породы
-double ro_r = 2000.; // кг/м^3
-// Теплопроводность
-double lambda0_w = 0.553; // Вт/(м*К)
-double lambda0_n = 0.14;
-double lambda0_g = 0.0237;
-double lambda0_r = 1.;
-double lambdaA_w = 3E-3; // 1/K
-double lambdaA_n = 1E-3;
-double lambdaA_g = 0.82;
-// Теплоемкость
-double c0_w = 4.194E3; // Дж/(кг*К)
-double c0_n = 1.7E3;
-double c0_g = 1E3;
-double c0_r = 0.8E3;
-double C_w = 1.15;
-double C_w2 = 0.015;
-double C_n = 3.4;
-double C_g = 0.119;
-double C_r = 0.75;
-// 1/K !!! E-4 Коэффициент теплового расширения (для плотности)
-double alfa_w = 1.32E-7; 
-double alfa_n = 9.2E-7;
-
-
 // Коэффициенты удельных теплоемкостей при постоянном давлении  для water, napl, gas and rock в Вт/(м*К)
 static inline double c_w (double T)
 {
-	return c0_w - C_w * (T - T_0) + C_w2 * (T - T_0) * (T - T_0);
+	return def.c0_w - def.C_w * (T - def.T_0) + def.C_w2 * (T - def.T_0) * (T - def.T_0);
 }
 
 static inline double c_n (double T)
 {
-	return c0_n + C_n * (T - T_0);
+	return def.c0_n + def.C_n * (T - def.T_0);
 }
 
 static inline double c_g (double T)
 {
-	return c0_g + C_g * (T - T_0);
+	return def.c0_g + def.C_g * (T - def.T_0);
 }
 
 static inline double c_r (double T)
 {
-	return c0_r + C_r * (T - T_0);
+	return def.c0_r + def.C_r * (T - def.T_0);
 }
 
 // Коэффициенты теплопроводности для water, napl, gas and rock
 static inline double lambda_w (double T)
 {
-	return lambda0_w * (1 - lambdaA_w * (T - T_0));
+	return def.lambda0_w * (1 - def.lambdaA_w * (T - def.T_0));
 }
 
 static inline double lambda_n (double T)
 {
-	return lambda0_n * (1 - lambdaA_n * (T - T_0));
+	return def.lambda0_n * (1 - def.lambdaA_n * (T - def.T_0));
 }
 
 static inline double lambda_g (double T)
 {
-	return lambda0_g * pow((T / T_0), lambdaA_g);
+	return def.lambda0_g * pow((T / def.T_0), def.lambdaA_g);
 }
 
 static inline double lambda_r (double T)
 {
-	return lambda0_r;
+	return def.lambda0_r;
 }
 
 // Эффективный коэффициент теплопроводности в точке (будет использоваться при расчете теплового потока)
@@ -89,21 +61,21 @@ static inline double assign_H_w (double T)
 	double integral = 0, sum = 0, h_temp;
 	int N_temp = 50;
 
-	h_temp = (T - T_0) / N_temp;
+	h_temp = (T - def.T_0) / N_temp;
 	
 	integral += (def.P_atm / def.ro0_w);
-	integral += с_w(T_0);
+	integral += с_w(def.T_0);
 	integral += с_w(T);
 
 	for(int i = 2; i < N_temp; i+=2)
-		sum += с_w(T_0 + i * h_temp);
+		sum += с_w(def.T_0 + i * h_temp);
 
 	sum *= 2;
 	integral += sum;
 	sum = 0;
 
 	for(int i = 1; i < N_temp; i+=2)
-		sum += с_w(T_0 + i * h_temp);
+		sum += с_w(def.T_0 + i * h_temp);
 
 	sum *= 4;
 	integral += sum;
@@ -113,22 +85,22 @@ static inline double assign_H_w (double T)
 
 	return integral;
 	*/
-	return (def.P_atm / def.ro0_w) + (T - T_0) * (c0_w - (T - T_0) * (C_w / 2 + C_w2 * (T - T_0) / 3));
+	return (def.P_atm / def.ro0_w) + (T - def.T_0) * (def.c0_w - (T - def.T_0) * (def.C_w / 2 + def.C_w2 * (T - def.T_0) / 3));
 }
 
 static inline double assign_H_n (double T)
 {
-	return (def.P_atm / def.ro0_n) + (T - T_0) * (c0_n + C_n * (T - T_0) / 2);
+	return (def.P_atm / def.ro0_n) + (T - def.T_0) * (def.c0_n + def.C_n * (T - def.T_0) / 2);
 }
 
 static inline double assign_H_g (double T)
 {
-	return (def.P_atm / def.ro0_g) + (T - T_0) * (c0_g + C_g * (T - T_0) / 2);
+	return (def.P_atm / def.ro0_g) + (T - def.T_0) * (def.c0_g + def.C_g * (T - def.T_0) / 2);
 }
 
 static inline double assign_H_r (double T)
 {
-	return (def.P_atm / ro_r) + (T - T_0) * (c0_r + C_r * (T - T_0) / 2);
+	return (def.P_atm / def.ro_r) + (T - def.T_0) * (def.c0_r + def.C_r * (T - def.T_0) / 2);
 }
 
 void assign_H (int local)
@@ -151,13 +123,13 @@ static inline double ro(double P, double T, char phase)
 	switch (phase)
 	{
 	case 'w':
-		result_ro = def.ro0_w * (1. + (def.beta_w) * (P - def.P_atm) - alfa_w * (T - T_0));
+		result_ro = def.ro0_w * (1. + (def.beta_w) * (P - def.P_atm) - def.alfa_w * (T - def.T_0));
 		break;
 	case 'n':
-		result_ro = def.ro0_n * (1. + (def.beta_n) * (P - def.P_atm) - alfa_n * (T - T_0));
+		result_ro = def.ro0_n * (1. + (def.beta_n) * (P - def.P_atm) - def.alfa_n * (T - def.T_0));
 		break;
 	case 'g':
-		result_ro = def.ro0_g * (P / def.P_atm) * (T_0 / T);
+		result_ro = def.ro0_g * (P / def.P_atm) * (def.T_0 / T);
 		break;
 	default:
 		printf ("Wrong phase in function ro!\n");
@@ -184,7 +156,7 @@ static inline double d_ro(double P, double T, char phase, char var)
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = (-1) * def.ro0_w * alfa_w;
+			result_d_ro = (-1) * def.ro0_w * def.alfa_w;
 		}
 		else 
 		{
@@ -198,7 +170,7 @@ static inline double d_ro(double P, double T, char phase, char var)
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = (-1) * def.ro0_n * alfa_n;
+			result_d_ro = (-1) * def.ro0_n * def.alfa_n;
 		}
 		else 
 		{
@@ -208,11 +180,11 @@ static inline double d_ro(double P, double T, char phase, char var)
 	case 'g':
 		if (var == 'P')
 		{
-			result_d_ro = (def.ro0_g / def.P_atm) * (T_0 / T);
+			result_d_ro = (def.ro0_g / def.P_atm) * (def.T_0 / T);
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = def.ro0_g * (P / def.P_atm) * (-1) * (T_0 / T) / T;
+			result_d_ro = def.ro0_g * (P / def.P_atm) * (-1) * (def.T_0 / T) / T;
 		}
 		else 
 		{
@@ -377,7 +349,7 @@ void assign_E_current (int local)
 	HostArraysPtr.E[local] = (HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (HostArraysPtr.ro_w[local] * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local])
 		+ HostArraysPtr.S_n[local] * (HostArraysPtr.ro_n[local] * HostArraysPtr.H_n[local] - HostArraysPtr.P_n[local])
 		+ HostArraysPtr.S_g[local] * (HostArraysPtr.ro_g[local] * HostArraysPtr.H_g[local] - HostArraysPtr.P_g[local])) 
-		+ (1. - HostArraysPtr.m[local]) * (ro_r * HostArraysPtr.H_r[local] - HostArraysPtr.P_w[local]));
+		+ (1. - HostArraysPtr.m[local]) * (def.ro_r * HostArraysPtr.H_r[local] - HostArraysPtr.P_w[local]));
 
 	test_nan(HostArraysPtr.E[local], __FILE__, __LINE__);
 }
@@ -445,7 +417,7 @@ void Newton(int i, int j, int k)
 			F[4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w') * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local])
 				+ HostArraysPtr.S_n[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n') * HostArraysPtr.H_n[local] - HostArraysPtr.P_w[local])
 				+ HostArraysPtr.S_g[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g') * HostArraysPtr.H_g[local] - HostArraysPtr.P_w[local]))
-				+ (1. - HostArraysPtr.m[local]) * (ro_r * HostArraysPtr.H_r[local] - HostArraysPtr.P_w[local]) 
+				+ (1. - HostArraysPtr.m[local]) * (def.ro_r * HostArraysPtr.H_r[local] - HostArraysPtr.P_w[local])
 				- HostArraysPtr.E_new[local];
 
 			// Матрица частных производных. Строки: dF/dSw, dF/dSn, dF/dSg, dF/dP, dF/dT
@@ -487,7 +459,7 @@ void Newton(int i, int j, int k)
 				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n') * c_n(HostArraysPtr.T[local]))
 				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T') * HostArraysPtr.H_g[local]
 				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g') * c_g(HostArraysPtr.T[local])))
-				+ (1. - HostArraysPtr.m[local]) * ro_r * c_r(HostArraysPtr.T[local]);
+				+ (1. - HostArraysPtr.m[local]) * def.ro_r * c_r(HostArraysPtr.T[local]);
 
 			reverse_matrix(dF, n);
 			mult_matrix_vector(correction, dF, F, n);

@@ -93,6 +93,13 @@ struct consts_tag
 	double P_d_nw[1];
 	double P_d_gn[1];
 	double c_g, beta_g, mu_g, ro0_g, S_w_gr;
+#ifdef ENERGY
+	double T_0;
+	double ro_r;
+	double lambda0_w, lambda0_n, lambda0_g, lambda0_r, lambdaA_w, lambdaA_n, lambdaA_g;
+	double c0_w, c0_n, c0_g, c0_r, C_w, C_w2, C_n, C_g, C_r;
+	double alfa_w, alfa_n;
+#endif
 	// Локальные размеры
 	int locNx, locNy, locNz;
 	// Число процессоров и ранг процессора

@@ -172,6 +172,29 @@ void read_defines_test()
 	test_positive(def.mu_g, __FILE__, __LINE__);
 	test_S(def.S_w_gr, __FILE__, __LINE__);
 	test_S(def.S_n_gr, __FILE__, __LINE__);
+
+#ifdef ENERGY
+	test_positive(def.T_0, __FILE__, __LINE__);
+	test_positive(def.ro_r, __FILE__, __LINE__);
+	test_positive(def.lambda0_w, __FILE__, __LINE__);
+	test_positive(def.lambda0_n, __FILE__, __LINE__);
+	test_positive(def.lambda0_g, __FILE__, __LINE__);
+	test_positive(def.lambda0_r, __FILE__, __LINE__);
+	test_positive(def.lambdaA_w, __FILE__, __LINE__);
+	test_positive(def.lambdaA_n, __FILE__, __LINE__);
+	test_positive(def.lambdaA_g, __FILE__, __LINE__);
+	test_positive(def.c0_w, __FILE__, __LINE__);
+	test_positive(def.c0_n, __FILE__, __LINE__);
+	test_positive(def.c0_g, __FILE__, __LINE__);
+	test_positive(def.c0_r, __FILE__, __LINE__);
+	test_positive(def.C_w, __FILE__, __LINE__);
+	test_positive(def.C_w2, __FILE__, __LINE__);
+	test_positive(def.C_n, __FILE__, __LINE__);
+	test_positive(def.C_g, __FILE__, __LINE__);
+	test_positive(def.C_r, __FILE__, __LINE__);
+	test_positive(def.alfa_w, __FILE__, __LINE__);
+	test_positive(def.alfa_n, __FILE__, __LINE__);
+#endif
 #endif
 
 }

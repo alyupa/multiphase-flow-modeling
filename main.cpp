@@ -945,6 +945,108 @@ void read_defines(int argc, char *argv[])
 			def.S_n_gr = atof(attr_value);
 			continue;
 		}
+#ifdef ENERGY
+		if (!strcmp(attr_name, "T_0"))
+		{
+			def.T_0 = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "RO_R"))
+		{
+			def.ro_r = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "LAMBDA_0_W"))
+		{
+			def.lambda0_w = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "LAMBDA_0_N"))
+		{
+			def.lambda0_n = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "LAMBDA_0_G"))
+		{
+			def.lambda0_g = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "LAMBDA_0_R"))
+		{
+			def.lambda0_r = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "LAMBDA_A_W"))
+		{
+			def.lambdaA_w = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "LAMBDA_A_N"))
+		{
+			def.lambdaA_n = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "LAMBDA_A_G"))
+		{
+			def.lambdaA_g = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_0_W"))
+		{
+			def.c0_w = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_0_N"))
+		{
+			def.c0_n = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_0_G"))
+		{
+			def.c0_g = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_0_R"))
+		{
+			def.c0_r = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_1_W"))
+		{
+			def.C_w = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_1_W2"))
+		{
+			def.C_w2 = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_1_N"))
+		{
+			def.C_n = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_1_G"))
+		{
+			def.C_g = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "C_1_R"))
+		{
+			def.C_r = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "ALFA_W"))
+		{
+			def.alfa_w = atof(attr_value);
+			continue;
+		}
+		if (!strcmp(attr_name, "ALFA_N"))
+		{
+			def.alfa_n = atof(attr_value);
+			continue;
+		}
+#endif
 		if (!strcmp(attr_name, "SOURCE"))
 		{
 			def.source = atoi(attr_value);

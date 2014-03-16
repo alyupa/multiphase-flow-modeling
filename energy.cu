@@ -1,73 +1,45 @@
 #include "gpu.h"
 
-// !!! Нужно потом будет вынести в структуру констант
-// Базовая температура
-__constant__ double T_0 = 273.; // К
-// Плотность породы
-__constant__ double ro_r = 2000.; // кг/м^3
-// Теплопроводность
-__constant__ double lambda0_w = 0.553; // Вт/(м*К)
-__constant__ double lambda0_n = 0.14;
-__constant__ double lambda0_g = 0.0237;
-__constant__ double lambda0_r = 1.;
-__constant__ double lambdaA_w = 3E-3; // 1/K
-__constant__ double lambdaA_n = 1E-3;
-__constant__ double lambdaA_g = 0.82;
-// Теплоемкость
-__constant__ double c0_w = 4.194E3; // Дж/(кг*К)
-__constant__ double c0_n = 1.7E3;
-__constant__ double c0_g = 1E3;
-__constant__ double c0_r = 0.8E3;
-__constant__ double C_w = 1.15;
-__constant__ double C_w2 = 0.015;
-__constant__ double C_n = 3.4;
-__constant__ double C_g = 0.119;
-__constant__ double C_r = 0.75;
-// 1/K !!! E-4 Коэффициент теплового расширения (для плотности)
-__constant__ double alfa_w = 1.32E-7; 
-__constant__ double alfa_n = 9.2E-7;
-
-
 // Коэффициенты удельных теплоемкостей при постоянном давлении  для water, napl, gas and rock в Вт/(м*К)
 __device__ double c_w (double T)
 {
-	return c0_w - C_w * (T - T_0) + C_w2 * (T - T_0) * (T - T_0);
+	return gpu_def->c0_w - gpu_def->C_w * (T - gpu_def->T_0) + gpu_def->C_w2 * (T - gpu_def->T_0) * (T - gpu_def->T_0);
 }
 
 __device__ double c_n (double T)
 {
-	return c0_n + C_n * (T - T_0);
+	return gpu_def->c0_n + gpu_def->C_n * (T - gpu_def->T_0);
 }
 
 __device__ double c_g (double T)
 {
-	return c0_g + C_g * (T - T_0);
+	return gpu_def->c0_g + gpu_def->C_g * (T - gpu_def->T_0);
 }
 
 __device__ double c_r (double T)
 {
-	return c0_r + C_r * (T - T_0);
+	return gpu_def->c0_r + gpu_def->C_r * (T - gpu_def->T_0);
 }
 
 // Коэффициенты теплопроводности для water, napl, gas and rock
 __device__ double lambda_w (double T)
 {
-	return lambda0_w * (1 - lambdaA_w * (T - T_0));
+	return gpu_def->lambda0_w * (1 - gpu_def->lambdaA_w * (T - gpu_def->T_0));
 }
 
 __device__ double lambda_n (double T)
 {
-	return lambda0_n * (1 - lambdaA_n * (T - T_0));
+	return gpu_def->lambda0_n * (1 - gpu_def->lambdaA_n * (T - gpu_def->T_0));
 }
 
 __device__ double lambda_g (double T)
 {
-	return lambda0_g * pow((T / T_0), lambdaA_g);
+	return gpu_def->lambda0_g * pow((T / gpu_def->T_0), gpu_def->lambdaA_g);
 }
 
 __device__ double lambda_r (double T)
 {
-	return lambda0_r;
+	return gpu_def->lambda0_r;
 }
 
 // Эффективный коэффициент теплопроводности в точке (будет использоваться при расчете теплового потока)
@@ -87,21 +59,21 @@ __device__ double assign_H_w (double T)
 	double integral = 0, sum = 0, h_temp;
 	int N_temp = 50;
 
-	h_temp = (T - T_0) / N_temp;
+	h_temp = (T - gpu_def->T_0) / N_temp;
 	
 	integral += (gpu_def->P_atm / gpu_def->ro0_w);
-	integral += с_w(T_0);
+	integral += с_w(gpu_def->T_0);
 	integral += с_w(T);
 
 	for(int i = 2; i < N_temp; i+=2)
-		sum += с_w(T_0 + i * h_temp);
+		sum += с_w(gpu_def->T_0 + i * h_temp);
 
 	sum *= 2;
 	integral += sum;
 	sum = 0;
 
 	for(int i = 1; i < N_temp; i+=2)
-		sum += с_w(T_0 + i * h_temp);
+		sum += с_w(gpu_def->T_0 + i * h_temp);
 
 	sum *= 4;
 	integral += sum;
@@ -111,22 +83,23 @@ __device__ double assign_H_w (double T)
 
 	return integral;
 	*/
-	return (gpu_def->P_atm / gpu_def->ro0_w) + (T - T_0) * (c0_w - (T - T_0) * (C_w / 2 + C_w2 * (T - T_0) / 3));
+	return (gpu_def->P_atm / gpu_def->ro0_w) + (T - gpu_def->T_0) * (gpu_def->c0_w - (T - gpu_def->T_0) \
+			* (gpu_def->C_w / 2 + gpu_def->C_w2 * (T - gpu_def->T_0) / 3));
 }
 
 __device__ double assign_H_n (double T)
 {
-	return (gpu_def->P_atm / gpu_def->ro0_n) + (T - T_0) * (c0_n + C_n * (T - T_0) / 2);
+	return (gpu_def->P_atm / gpu_def->ro0_n) + (T - gpu_def->T_0) * (gpu_def->c0_n + gpu_def->C_n * (T - gpu_def->T_0) / 2);
 }
 
 __device__ double assign_H_g (double T)
 {
-	return (gpu_def->P_atm / gpu_def->ro0_g) + (T - T_0) * (c0_g + C_g * (T - T_0) / 2);
+	return (gpu_def->P_atm / gpu_def->ro0_g) + (T - gpu_def->T_0) * (gpu_def->c0_g + gpu_def->C_g * (T - gpu_def->T_0) / 2);
 }
 
 __device__ double assign_H_r (double T)
 {
-	return (gpu_def->P_atm / ro_r) + (T - T_0) * (c0_r + C_r * (T - T_0) / 2);
+	return (gpu_def->P_atm / gpu_def->ro_r) + (T - gpu_def->T_0) * (gpu_def->c0_r + gpu_def->C_r * (T - gpu_def->T_0) / 2);
 }
 
 __device__ void device_assign_H (int local)
@@ -149,13 +122,13 @@ __device__ double ro(double P, double T, char phase)
 	switch (phase)
 	{
 	case 'w':
-		result_ro = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (P - gpu_def->P_atm) - alfa_w * (T - T_0));
+		result_ro = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (P - gpu_def->P_atm) - gpu_def->alfa_w * (T - gpu_def->T_0));
 		break;
 	case 'n':
-		result_ro = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (P - gpu_def->P_atm) - alfa_n * (T - T_0));
+		result_ro = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (P - gpu_def->P_atm) - gpu_def->alfa_n * (T - gpu_def->T_0));
 		break;
 	case 'g':
-		result_ro = gpu_def->ro0_g * (P / gpu_def->P_atm) * (T_0 / T);
+		result_ro = gpu_def->ro0_g * (P / gpu_def->P_atm) * (gpu_def->T_0 / T);
 		break;
 	default:
 		printf ("Wrong phase in function ro!\n");
@@ -182,7 +155,7 @@ __device__ double d_ro(double P, double T, char phase, char var)
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = (-1) * gpu_def->ro0_w * alfa_w;
+			result_d_ro = (-1) * gpu_def->ro0_w * gpu_def->alfa_w;
 		}
 		else 
 		{
@@ -196,7 +169,7 @@ __device__ double d_ro(double P, double T, char phase, char var)
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = (-1) * gpu_def->ro0_n * alfa_n;
+			result_d_ro = (-1) * gpu_def->ro0_n * gpu_def->alfa_n;
 		}
 		else 
 		{
@@ -206,11 +179,11 @@ __device__ double d_ro(double P, double T, char phase, char var)
 	case 'g':
 		if (var == 'P')
 		{
-			result_d_ro = (gpu_def->ro0_g / gpu_def->P_atm) * (T_0 / T);
+			result_d_ro = (gpu_def->ro0_g / gpu_def->P_atm) * (gpu_def->T_0 / T);
 		} 
 		else if (var == 'T')
 		{
-			result_d_ro = gpu_def->ro0_g * (P / gpu_def->P_atm) * (-1) * (T_0 / T) / T;
+			result_d_ro = gpu_def->ro0_g * (P / gpu_def->P_atm) * (-1) * (gpu_def->T_0 / T) / T;
 		}
 		else 
 		{
@@ -376,7 +349,7 @@ __device__ void device_assign_E_current (int local)
 	DevArraysPtr->E[local] = (DevArraysPtr->m[local] * (DevArraysPtr->S_w[local] * (DevArraysPtr->ro_w[local] * DevArraysPtr->H_w[local] - DevArraysPtr->P_w[local])
 		+ DevArraysPtr->S_n[local] * (DevArraysPtr->ro_n[local] * DevArraysPtr->H_n[local] - DevArraysPtr->P_n[local])
 		+ DevArraysPtr->S_g[local] * (DevArraysPtr->ro_g[local] * DevArraysPtr->H_g[local] - DevArraysPtr->P_g[local]))
-		+ (1. - DevArraysPtr->m[local]) * (ro_r * DevArraysPtr->H_r[local] - DevArraysPtr->P_w[local]));
+		+ (1. - DevArraysPtr->m[local]) * (gpu_def->ro_r * DevArraysPtr->H_r[local] - DevArraysPtr->P_w[local]));
 
 	device_test_nan(DevArraysPtr->E[local], __FILE__, __LINE__);
 }
@@ -456,7 +429,7 @@ __global__ void Newton_method_kernel()
 			F[4] = DevArraysPtr->m[local] * (DevArraysPtr->S_w[local] * (ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'w') * DevArraysPtr->H_w[local] - DevArraysPtr->P_w[local])
 				+ DevArraysPtr->S_n[local] * (ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n') * DevArraysPtr->H_n[local] - DevArraysPtr->P_w[local])
 				+ DevArraysPtr->S_g[local] * (ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g') * DevArraysPtr->H_g[local] - DevArraysPtr->P_w[local]))
-				+ (1. - DevArraysPtr->m[local]) * (ro_r * DevArraysPtr->H_r[local] - DevArraysPtr->P_w[local])
+				+ (1. - DevArraysPtr->m[local]) * (gpu_def->ro_r * DevArraysPtr->H_r[local] - DevArraysPtr->P_w[local])
 				- DevArraysPtr->E_new[local];
 
 			// Матрица частных производных. Строки: dF/dSw, dF/dSn, dF/dSg, dF/dP, dF/dT
@@ -498,7 +471,7 @@ __global__ void Newton_method_kernel()
 				+ ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n') * c_n(DevArraysPtr->T[local]))
 				+ DevArraysPtr->S_g[local] * (d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g', 'T') * DevArraysPtr->H_g[local]
 				+ ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g') * c_g(DevArraysPtr->T[local])))
-				+ (1. - DevArraysPtr->m[local]) * ro_r * c_r(DevArraysPtr->T[local]);
+				+ (1. - DevArraysPtr->m[local]) * gpu_def->ro_r * c_r(DevArraysPtr->T[local]);
 
 			device_reverse_matrix(dF, n);
 			device_mult_matrix_vector(correction, dF, F, n);
