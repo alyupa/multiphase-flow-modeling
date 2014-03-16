@@ -131,27 +131,27 @@ __device__ double directed_difference (double* P, double* Xi, double* ro, char a
 	{
 	case 'x':
 		{
-			x2 = device_right_difference (P, 'x');
-			x1 = device_left_difference (P, 'x');
+			x2 = -device_right_difference (P, 'x');
+			x1 = -device_left_difference (P, 'x');
 			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
 				(x1 + fabs(x1)) / 2. * (*(Xi-1)) * (*(ro-1)) +
-				(x2 - fabs(x2)) / 2. * (*(Xi+1)) * (*(ro+1))) / gpu_def->hx;
+				(x2 - fabs(x2)) / 2. * (*(Xi+1)) * (*(ro+1))) / gpu_def->hx * (-1.0);
 		}
 	case 'y':
 		{
-			x2 = device_right_difference (P, 'y') + gpu_def->g_const * (*ro);
-			x1 = device_left_difference (P, 'y') + gpu_def->g_const * (*ro);
+			x2 = -device_right_difference (P, 'y') + gpu_def->g_const * (*ro);
+			x1 = -device_left_difference (P, 'y') + gpu_def->g_const * (*ro);
 			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
 				(x1 + fabs(x1)) / 2. * (*(Xi - gpu_def->locNx)) * (*(ro - gpu_def->locNx)) +
-				(x2 - fabs(x2)) / 2. * (*(Xi + gpu_def->locNx)) * (*(ro + gpu_def->locNx))) / gpu_def->hy;
+				(x2 - fabs(x2)) / 2. * (*(Xi + gpu_def->locNx)) * (*(ro + gpu_def->locNx))) / gpu_def->hy * (-1.0);
 		}
 	case 'z':
 		{
-			x2 = device_right_difference (P, 'z');
-			x1 = device_left_difference (P, 'z');
+			x2 = -device_right_difference (P, 'z');
+			x1 = -device_left_difference (P, 'z');
 			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
 				(x1 + fabs(x1)) / 2. * (*(Xi - gpu_def->locNx * (gpu_def->locNy))) * (*(ro - gpu_def->locNx * (gpu_def->locNy))) +
-				(x2 - fabs(x2)) / 2. * (*(Xi + gpu_def->locNx * (gpu_def->locNy))) * (*(ro + gpu_def->locNx * (gpu_def->locNy)))) / gpu_def->hz;
+				(x2 - fabs(x2)) / 2. * (*(Xi + gpu_def->locNx * (gpu_def->locNy))) * (*(ro + gpu_def->locNx * (gpu_def->locNy)))) / gpu_def->hz * (-1.0);
 		}
 	default:
 		{

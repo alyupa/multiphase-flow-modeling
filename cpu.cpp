@@ -190,27 +190,27 @@ double directed_difference (double* P, double* Xi, double* ro, char axis)
 	{
 	case 'x':
 		{
-			x2 = right_difference (P, 'x');
-			x1 = left_difference (P, 'x');
+			x2 = -right_difference (P, 'x');
+			x1 = -left_difference (P, 'x');
 			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
 		      (x1 + fabs(x1)) / 2. * (*(Xi-1)) * (*(ro-1)) +
-		      (x2 - fabs(x2)) / 2. * (*(Xi+1)) * (*(ro+1))) / def.hx;
+		      (x2 - fabs(x2)) / 2. * (*(Xi+1)) * (*(ro+1))) / def.hx * (-1.0);
 		}
 	case 'y':
 		{
-			x2 = right_difference (P, 'y') + def.g_const * (*ro);
-			x1 = left_difference (P, 'y') + def.g_const * (*ro);
+			x2 = -right_difference (P, 'y') + def.g_const * (*ro);
+			x1 = -left_difference (P, 'y') + def.g_const * (*ro);
 			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
 		      (x1 + fabs(x1)) / 2. * (*(Xi-def.locNx)) * (*(ro-def.locNx)) +
-		      (x2 - fabs(x2)) / 2. * (*(Xi+def.locNx)) * (*(ro+def.locNx))) / def.hy;
+		      (x2 - fabs(x2)) / 2. * (*(Xi+def.locNx)) * (*(ro+def.locNx))) / def.hy * (-1.0);
 		}
 	case 'z':
 		{
-			x2 = right_difference (P, 'z');
-			x1 = left_difference (P, 'z');
+			x2 = -right_difference (P, 'z');
+			x1 = -left_difference (P, 'z');
 			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
 		      (x1 + fabs(x1)) / 2. * (*(Xi-def.locNx * (def.locNy))) * (*(ro-def.locNx * (def.locNy))) +
-		      (x2 - fabs(x2)) / 2. * (*(Xi+def.locNx * (def.locNy))) * (*(ro+def.locNx * (def.locNy)))) / def.hz;
+		      (x2 - fabs(x2)) / 2. * (*(Xi+def.locNx * (def.locNy))) * (*(ro+def.locNx * (def.locNy)))) / def.hz * (-1.0);
 		}
 	default:
 		{
