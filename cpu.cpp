@@ -183,27 +183,34 @@ double multi_central_difference (double* ptr1, double* ptr2, char axis)
 }
 
 // Расчет направленной разности
-double directed_difference (double x1, double x2, double* Xi, double* ro, char axis)
+double directed_difference (double* P, double* Xi, double* ro, char axis)
 {
+	double x1 = 0, x2 = 0;
 	switch (axis)
 	{
 	case 'x':
 		{
-			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (-1.) * (*Xi) * (*ro) -
-		      (x1 + fabs(x1)) / 2. * (-1.) * (*(Xi-1)) * (*(ro-1)) +
-		      (x2 - fabs(x2)) / 2. * (-1.) * (*(Xi+1)) * (*(ro+1))) / def.hx;
+			x2 = right_difference (P, 'x');
+			x1 = left_difference (P, 'x');
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-1)) * (*(ro-1)) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+1)) * (*(ro+1))) / def.hx;
 		}
 	case 'y':
 		{
-			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (-1.) * (*Xi) * (*ro) -
-		      (x1 + fabs(x1)) / 2. * (-1.) * (*(Xi-def.locNx)) * (*(ro-def.locNx)) +
-		      (x2 - fabs(x2)) / 2. * (-1.) * (*(Xi+def.locNx)) * (*(ro+def.locNx))) / def.hy;
+			x2 = right_difference (P, 'y') + def.g_const * (*ro);
+			x1 = left_difference (P, 'y') + def.g_const * (*ro);
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-def.locNx)) * (*(ro-def.locNx)) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+def.locNx)) * (*(ro+def.locNx))) / def.hy;
 		}
 	case 'z':
 		{
-			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (-1.) * (*Xi) * (*ro) -
-		      (x1 + fabs(x1)) / 2. * (-1.) * (*(Xi-def.locNx * (def.locNy))) * (*(ro-def.locNx * (def.locNy))) +
-		      (x2 - fabs(x2)) / 2. * (-1.) * (*(Xi+def.locNx * (def.locNy))) * (*(ro+def.locNx * (def.locNy)))) / def.hz;
+			x2 = right_difference (P, 'z');
+			x1 = left_difference (P, 'z');
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-def.locNx * (def.locNy))) * (*(ro-def.locNx * (def.locNy))) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+def.locNx * (def.locNy))) * (*(ro+def.locNx * (def.locNy)))) / def.hz;
 		}
 	default:
 		{
@@ -220,7 +227,7 @@ double left_difference (double* ptr, char axis)
 	{
 	case 'x':
 		{
-			return (*ptr - *(ptr-1) )/ def.hx;	
+			return (*ptr - *(ptr-1) )/ def.hx;
 		}
 	case 'y':
 		{
@@ -245,7 +252,7 @@ double right_difference (double* ptr, char axis)
 	{
 	case 'x':
 		{
-			return (*(ptr+1) - *ptr )/ def.hx;	
+			return (*(ptr+1) - *ptr )/ def.hx;
 		}
 	case 'y':
 		{
@@ -518,9 +525,7 @@ void assign_roS_nr(double t, int i, int j, int k)
 		if(! HostArraysPtr.m[local])
 			return;
 
-		double q_w = 0.;
-		double q_n = 0.;
-		double q_g = 0.;
+		double q_w = 0., q_n = 0., q_g = 0;
 
 		// Значения q на скважинах
 		wells_q(i, j, k, &q_w, &q_n, &q_g);
@@ -530,81 +535,40 @@ void assign_roS_nr(double t, int i, int j, int k)
 		        * (1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local]);
 		HostArraysPtr.roS_n[local] = HostArraysPtr.ro_n[local] * HostArraysPtr.S_n[local];
 
-		double fx_g, fy_g, fz_g, A3 = 0.;
+		double f_w = 0., f_n = 0., f_g = 0., A1 = 0., A2 = 0., A3 = 0.;
 
-		double x1, x2, y1, y2, z1, z2, fx_w, fy_w, fz_w, fx_n, fy_n, fz_n, A1 = 0., A2 = 0.;
-
-		if ((def.Nz) < 2)
+		if ((def.Nx) > 2)
 		{
-			fz_w = 0.;
-			fz_n = 0.;
-			fz_g = 0.;
+			f_w += directed_difference (HostArraysPtr.P_w+local, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'x');
+			f_n += directed_difference (HostArraysPtr.P_n+local, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'x');
+			f_g += directed_difference (HostArraysPtr.P_g+local, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'x');
 		}
-		else
+		if ((def.Ny) > 2)
 		{
-			z2 = -1. * right_difference (HostArraysPtr.P_w+local, 'z');
-			z1 = -1. * left_difference (HostArraysPtr.P_w+local, 'z');
-			fz_w = directed_difference (z1, z2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'z');
-
-			z2 = -1. * right_difference (HostArraysPtr.P_n+local, 'z');
-			z1 = -1. * left_difference (HostArraysPtr.P_n+local, 'z');
-			fz_n = directed_difference (z1, z2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'z');
-
-			z2 = -1. * right_difference (HostArraysPtr.P_g+local, 'z');
-			z1 = -1. * left_difference (HostArraysPtr.P_g+local, 'z');
-			fz_g = directed_difference (z1, z2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'z');
-
+			f_w += directed_difference (HostArraysPtr.P_w+local, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'y');
+			f_n += directed_difference (HostArraysPtr.P_n+local, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'y');
+			f_g += directed_difference (HostArraysPtr.P_g+local, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'y');
+		}
+		if ((def.Nz) > 2)
+		{
+			f_w += directed_difference (HostArraysPtr.P_w+local, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'z');
+			f_n += directed_difference (HostArraysPtr.P_n+local, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'z');
+			f_g += directed_difference (HostArraysPtr.P_g+local, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'z');
 		}
 
-		if ((def.Nx) < 2)
-		{
-			fx_w = 0.;
-			fx_n = 0.;
-			fx_g = 0.;
-		}
-		else
-		{
-			x2 = -1. * right_difference (HostArraysPtr.P_w+local, 'x'); //-(HostArraysPtr.P_w[i + 1 + j * (def.locNx) + k * (def.locNx) * (def.locNy)] - Pw) / def.hx;
-			x1 = -1. * left_difference (HostArraysPtr.P_w+local, 'x'); //-(Pw - HostArraysPtr.P_w[i - 1 + j * (def.locNx) + k * (def.locNx) * (def.locNy)]) / def.hx;
-			fx_w = directed_difference (x1, x2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'x');
-
-			x2 = -1. * right_difference (HostArraysPtr.P_n+local, 'x');
-			x1 = -1. * left_difference (HostArraysPtr.P_n+local, 'x');
-			fx_n = directed_difference (x1, x2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'x');
-
-			x2 = -1. * right_difference (HostArraysPtr.P_g+local, 'x');
-			x1 = -1. * left_difference (HostArraysPtr.P_g+local, 'x');
-			fx_g = directed_difference (x1, x2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'x');
-		}
-
-		y2 = -1. * right_difference (HostArraysPtr.P_w+local, 'y') + def.g_const * (HostArraysPtr.ro_w[local]);
-		y1 = -1. * left_difference (HostArraysPtr.P_w+local, 'y') + def.g_const * (HostArraysPtr.ro_w[local]);
-		fy_w = directed_difference (y1, y2, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, 'y');
- 
-		y2 = -1. * right_difference (HostArraysPtr.P_n+local, 'y') + def.g_const * (HostArraysPtr.ro_n[local]);
-		y1 = -1. * left_difference (HostArraysPtr.P_n+local, 'y') + def.g_const * (HostArraysPtr.ro_n[local]);
-		fy_n = directed_difference (y1, y2, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, 'y');
-
-		A1 = HostArraysPtr.roS_w[local] - (def.dt / HostArraysPtr.m[local]) * (-q_w + fx_w + fy_w + fz_w);
-		A2 = HostArraysPtr.roS_n[local] - (def.dt / HostArraysPtr.m[local]) * (-q_n + fx_n + fy_n + fz_n);
+		A1 = HostArraysPtr.roS_w[local] + (def.dt / HostArraysPtr.m[local]) * (q_w - f_w);
+		A2 = HostArraysPtr.roS_n[local] + (def.dt / HostArraysPtr.m[local]) * (q_n - f_n);
+		A3 = HostArraysPtr.roS_g[local] + (def.dt / HostArraysPtr.m[local]) * (q_g - f_g);
 
 		HostArraysPtr.roS_w_old[local] = HostArraysPtr.roS_w[local];
 		HostArraysPtr.roS_n_old[local] = HostArraysPtr.roS_n[local];
+		HostArraysPtr.roS_g_old[local] = HostArraysPtr.roS_g[local];
 		HostArraysPtr.roS_w[local] = A1;
 		HostArraysPtr.roS_n[local] = A2;
+		HostArraysPtr.roS_g[local] = A3;
 
 		test_positive(HostArraysPtr.roS_w[local], __FILE__, __LINE__);
 		test_positive(HostArraysPtr.roS_n[local], __FILE__, __LINE__);
-
-		y2 = -1. * right_difference (HostArraysPtr.P_g+local, 'y') + def.g_const * (HostArraysPtr.ro_g[local]);
-		y1 = -1. * left_difference (HostArraysPtr.P_g+local, 'y') + def.g_const * (HostArraysPtr.ro_g[local]);
-		fy_g = directed_difference (y1, y2, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, 'y');
-
-		A3 = HostArraysPtr.roS_g[local] - (def.dt / HostArraysPtr.m[local]) * (q_g + fx_g + fy_g + fz_g);
-
-		HostArraysPtr.roS_g_old[local] = HostArraysPtr.roS_g[local];
-		HostArraysPtr.roS_g[local] = A3;
-
 		test_positive(HostArraysPtr.roS_g[local], __FILE__, __LINE__);
 	}
 }

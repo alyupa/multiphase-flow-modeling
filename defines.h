@@ -160,6 +160,8 @@ void read_defines_test();
 
 
 // Расчеты в каждой точке
+double left_difference (double* ptr, char axis);
+double right_difference (double* ptr, char axis);
 void prepare_local_vars(int i, int j, int k);
 double ro_eff_gdy(int local);
 void assign_P_Xi(int i, int j, int k);

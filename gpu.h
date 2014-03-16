@@ -33,6 +33,8 @@ __device__ int device_is_output_well(int i, int j, int k);
 __device__ void device_assing_k(double* k_w, double* k_n, double S_w);
 __device__ void device_assign_S(int local);
 __device__ void device_assign_ro(int local);
+__device__ double device_left_difference (double* ptr, char axis);
+__device__ double device_right_difference (double* ptr, char axis);
 #ifdef ENERGY
 __device__ void device_assign_H(int local);
 __device__ void device_assign_E_current(int local);

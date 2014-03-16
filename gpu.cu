@@ -124,27 +124,34 @@ __device__ double multi_central_difference (double* ptr1, double* ptr2, char axi
 }
 
 // Расчет направленной разности
-__device__ double directed_difference (double x1, double x2, double* Xi, double* ro, char axis)
+__device__ double directed_difference (double* P, double* Xi, double* ro, char axis)
 {
+	double x1 = 0, x2 = 0;
 	switch (axis)
 	{
 	case 'x':
 		{
-			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (-1.) * (*Xi) * (*ro) -
-				(x1 + fabs(x1)) / 2. * (-1.) * (*(Xi-1)) * (*(ro-1)) +
-				(x2 - fabs(x2)) / 2. * (-1.) * (*(Xi+1)) * (*(ro+1))) / gpu_def->hx;
+			x2 = device_right_difference (P, 'x');
+			x1 = device_left_difference (P, 'x');
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
+				(x1 + fabs(x1)) / 2. * (*(Xi-1)) * (*(ro-1)) +
+				(x2 - fabs(x2)) / 2. * (*(Xi+1)) * (*(ro+1))) / gpu_def->hx;
 		}
 	case 'y':
 		{
-			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (-1.) * (*Xi) * (*ro) -
-				(x1 + fabs(x1)) / 2. * (-1.) * (*(Xi - gpu_def->locNx)) * (*(ro - gpu_def->locNx)) +
-				(x2 - fabs(x2)) / 2. * (-1.) * (*(Xi + gpu_def->locNx)) * (*(ro + gpu_def->locNx))) / gpu_def->hy;
+			x2 = device_right_difference (P, 'y') + gpu_def->g_const * (*ro);
+			x1 = device_left_difference (P, 'y') + gpu_def->g_const * (*ro);
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
+				(x1 + fabs(x1)) / 2. * (*(Xi - gpu_def->locNx)) * (*(ro - gpu_def->locNx)) +
+				(x2 - fabs(x2)) / 2. * (*(Xi + gpu_def->locNx)) * (*(ro + gpu_def->locNx))) / gpu_def->hy;
 		}
 	case 'z':
 		{
-			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (-1.) * (*Xi) * (*ro) -
-				(x1 + fabs(x1)) / 2. * (-1.) * (*(Xi - gpu_def->locNx * (gpu_def->locNy))) * (*(ro - gpu_def->locNx * (gpu_def->locNy))) +
-				(x2 - fabs(x2)) / 2. * (-1.) * (*(Xi + gpu_def->locNx * (gpu_def->locNy))) * (*(ro + gpu_def->locNx * (gpu_def->locNy)))) / gpu_def->hz;
+			x2 = device_right_difference (P, 'z');
+			x1 = device_left_difference (P, 'z');
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) -
+				(x1 + fabs(x1)) / 2. * (*(Xi - gpu_def->locNx * (gpu_def->locNy))) * (*(ro - gpu_def->locNx * (gpu_def->locNy))) +
+				(x2 - fabs(x2)) / 2. * (*(Xi + gpu_def->locNx * (gpu_def->locNy))) * (*(ro + gpu_def->locNx * (gpu_def->locNy)))) / gpu_def->hz;
 		}
 	default:
 		{
@@ -155,7 +162,7 @@ __device__ double directed_difference (double x1, double x2, double* Xi, double*
 }
 
 // Расчет левой разности
-__device__ double left_difference (double* ptr, char axis)
+__device__ double device_left_difference (double* ptr, char axis)
 {
 	switch (axis)
 	{
@@ -180,7 +187,7 @@ __device__ double left_difference (double* ptr, char axis)
 }
 
 // Расчет правой разности
-__device__ double right_difference (double* ptr, char axis)
+__device__ double device_right_difference (double* ptr, char axis)
 {
 	switch (axis)
 	{
@@ -300,17 +307,17 @@ __global__ void assign_u_kernel()
 		{
 			if (i == 0)
 			{
-				DevArraysPtr->ux_w[local] = DevArraysPtr->Xi_w[local] * right_difference(DevArraysPtr->P_w+local, 'x');
-				DevArraysPtr->ux_n[local] = DevArraysPtr->Xi_n[local] * right_difference(DevArraysPtr->P_n+local, 'x');
-				DevArraysPtr->ux_g[local] = DevArraysPtr->Xi_g[local] * right_difference(DevArraysPtr->P_g+local, 'x');
+				DevArraysPtr->ux_w[local] = DevArraysPtr->Xi_w[local] * device_right_difference(DevArraysPtr->P_w+local, 'x');
+				DevArraysPtr->ux_n[local] = DevArraysPtr->Xi_n[local] * device_right_difference(DevArraysPtr->P_n+local, 'x');
+				DevArraysPtr->ux_g[local] = DevArraysPtr->Xi_g[local] * device_right_difference(DevArraysPtr->P_g+local, 'x');
 			}
 			else
 			{
 				if (i == (gpu_def->locNx) - 1)
 				{
-					DevArraysPtr->ux_w[local] = DevArraysPtr->Xi_w[local] * left_difference(DevArraysPtr->P_w+local, 'x');
-					DevArraysPtr->ux_n[local] = DevArraysPtr->Xi_n[local] * left_difference(DevArraysPtr->P_n+local, 'x');
-					DevArraysPtr->ux_g[local] = DevArraysPtr->Xi_g[local] * left_difference(DevArraysPtr->P_g+local, 'x');
+					DevArraysPtr->ux_w[local] = DevArraysPtr->Xi_w[local] * device_left_difference(DevArraysPtr->P_w+local, 'x');
+					DevArraysPtr->ux_n[local] = DevArraysPtr->Xi_n[local] * device_left_difference(DevArraysPtr->P_n+local, 'x');
+					DevArraysPtr->ux_g[local] = DevArraysPtr->Xi_g[local] * device_left_difference(DevArraysPtr->P_g+local, 'x');
 				}
 				else
 				{
@@ -331,17 +338,17 @@ __global__ void assign_u_kernel()
 		{
 			if (j == 0)
 			{
-				DevArraysPtr->uy_w[local] = DevArraysPtr->Xi_w[local] * (right_difference (DevArraysPtr->P_w+local, 'y') - DevArraysPtr->ro_w[local] * (gpu_def->g_const));
-				DevArraysPtr->uy_n[local] = DevArraysPtr->Xi_n[local] * (right_difference (DevArraysPtr->P_n+local, 'y') - DevArraysPtr->ro_n[local] * (gpu_def->g_const));
-				DevArraysPtr->uy_g[local] = DevArraysPtr->Xi_g[local] * (right_difference (DevArraysPtr->P_g+local, 'y') - DevArraysPtr->ro_g[local] * (gpu_def->g_const));
+				DevArraysPtr->uy_w[local] = DevArraysPtr->Xi_w[local] * (device_right_difference (DevArraysPtr->P_w+local, 'y') - DevArraysPtr->ro_w[local] * (gpu_def->g_const));
+				DevArraysPtr->uy_n[local] = DevArraysPtr->Xi_n[local] * (device_right_difference (DevArraysPtr->P_n+local, 'y') - DevArraysPtr->ro_n[local] * (gpu_def->g_const));
+				DevArraysPtr->uy_g[local] = DevArraysPtr->Xi_g[local] * (device_right_difference (DevArraysPtr->P_g+local, 'y') - DevArraysPtr->ro_g[local] * (gpu_def->g_const));
 			}
 			else
 			{
 				if (j == (gpu_def->locNy) - 1)
 				{
-					DevArraysPtr->uy_w[local] = DevArraysPtr->Xi_w[local] * (left_difference (DevArraysPtr->P_w+local, 'y') - DevArraysPtr->ro_w[local] * (gpu_def->g_const));
-					DevArraysPtr->uy_n[local] = DevArraysPtr->Xi_n[local] * (left_difference (DevArraysPtr->P_n+local, 'y') - DevArraysPtr->ro_n[local] * (gpu_def->g_const));
-					DevArraysPtr->uy_g[local] = DevArraysPtr->Xi_g[local] * (left_difference (DevArraysPtr->P_g+local, 'y') - DevArraysPtr->ro_g[local] * (gpu_def->g_const));
+					DevArraysPtr->uy_w[local] = DevArraysPtr->Xi_w[local] * (device_left_difference (DevArraysPtr->P_w+local, 'y') - DevArraysPtr->ro_w[local] * (gpu_def->g_const));
+					DevArraysPtr->uy_n[local] = DevArraysPtr->Xi_n[local] * (device_left_difference (DevArraysPtr->P_n+local, 'y') - DevArraysPtr->ro_n[local] * (gpu_def->g_const));
+					DevArraysPtr->uy_g[local] = DevArraysPtr->Xi_g[local] * (device_left_difference (DevArraysPtr->P_g+local, 'y') - DevArraysPtr->ro_g[local] * (gpu_def->g_const));
 				}
 				else
 				{
@@ -362,17 +369,17 @@ __global__ void assign_u_kernel()
 		{
 			if (k == 0)
 			{
-				DevArraysPtr->uz_w[local] = DevArraysPtr->Xi_w[local] * right_difference (DevArraysPtr->P_w+local, 'z');
-				DevArraysPtr->uz_n[local] = DevArraysPtr->Xi_n[local] * right_difference (DevArraysPtr->P_n+local, 'z');
-				DevArraysPtr->uz_g[local] = DevArraysPtr->Xi_g[local] * right_difference (DevArraysPtr->P_g+local, 'z');
+				DevArraysPtr->uz_w[local] = DevArraysPtr->Xi_w[local] * device_right_difference (DevArraysPtr->P_w+local, 'z');
+				DevArraysPtr->uz_n[local] = DevArraysPtr->Xi_n[local] * device_right_difference (DevArraysPtr->P_n+local, 'z');
+				DevArraysPtr->uz_g[local] = DevArraysPtr->Xi_g[local] * device_right_difference (DevArraysPtr->P_g+local, 'z');
 			}
 			else
 			{
 				if (k == (gpu_def->locNz) - 1)
 				{
-					DevArraysPtr->uz_w[local] = DevArraysPtr->Xi_w[local] * left_difference (DevArraysPtr->P_w+local, 'z');
-					DevArraysPtr->uz_n[local] = DevArraysPtr->Xi_n[local] * left_difference (DevArraysPtr->P_n+local, 'z');
-					DevArraysPtr->uz_g[local] = DevArraysPtr->Xi_g[local] * left_difference (DevArraysPtr->P_g+local, 'z');
+					DevArraysPtr->uz_w[local] = DevArraysPtr->Xi_w[local] * device_left_difference (DevArraysPtr->P_w+local, 'z');
+					DevArraysPtr->uz_n[local] = DevArraysPtr->Xi_n[local] * device_left_difference (DevArraysPtr->P_n+local, 'z');
+					DevArraysPtr->uz_g[local] = DevArraysPtr->Xi_g[local] * device_left_difference (DevArraysPtr->P_g+local, 'z');
 				}
 				else
 				{
@@ -428,9 +435,7 @@ __global__ void assign_roS_kernel_nr(double t)
 		if(! DevArraysPtr->m[local])
 			return;
 
-		double q_w = 0.;
-		double q_n = 0.;
-		double q_g = 0.;
+		double q_w = 0., q_n = 0., q_g = 0.;
 
 		// Значения q на скважинах
 		device_wells_q(i, j, k, &q_w, &q_n, &q_g);
@@ -440,81 +445,42 @@ __global__ void assign_roS_kernel_nr(double t)
 		        * (1. - DevArraysPtr->S_w[local] - DevArraysPtr->S_n[local]);
 		DevArraysPtr->roS_n[local] = DevArraysPtr->ro_n[local] * DevArraysPtr->S_n[local];
 
-		double fx_g, fy_g, fz_g, A3 = 0.;
+		double f_w = 0., f_n = 0., f_g = 0., A1 = 0., A2 = 0., A3 = 0.;
 
-		double x1, x2, y1, y2, z1, z2, fx_w, fy_w, fz_w, fx_n, fy_n, fz_n, A1 = 0., A2 = 0.;
-
-		if ((gpu_def->Nz) < 2)
+		if ((gpu_def->Nx) > 2)
 		{
-			fz_w = 0.;
-			fz_n = 0.;
-			fz_g = 0.;
+			f_w += directed_difference (DevArraysPtr->P_w+local, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, 'x');
+			f_n += directed_difference (DevArraysPtr->P_n+local, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, 'x');
+			f_g += directed_difference (DevArraysPtr->P_g+local, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, 'x');
+
 		}
-		else
+		if ((gpu_def->Ny) > 2)
 		{
-			z2 = -1. * right_difference (DevArraysPtr->P_w+local, 'z');
-			z1 = -1. * left_difference (DevArraysPtr->P_w+local, 'z');
-			fz_w = directed_difference (z1, z2, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, 'z');
-
-			z2 = -1. * right_difference (DevArraysPtr->P_n+local, 'z');
-			z1 = -1. * left_difference (DevArraysPtr->P_n+local, 'z');
-			fz_n = directed_difference (z1, z2, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, 'z');
-
-			z2 = -1. * right_difference (DevArraysPtr->P_g+local, 'z');
-			z1 = -1. * left_difference (DevArraysPtr->P_g+local, 'z');
-			fz_g = directed_difference (z1, z2, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, 'z');
+			f_w += directed_difference (DevArraysPtr->P_w+local, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, 'y');
+			f_n += directed_difference (DevArraysPtr->P_n+local, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, 'y');
+			f_g += directed_difference (DevArraysPtr->P_g+local, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, 'y');
+		}
+		if ((gpu_def->Nz) > 2)
+		{
+			f_w += directed_difference (DevArraysPtr->P_w+local, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, 'z');
+			f_n += directed_difference (DevArraysPtr->P_n+local, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, 'z');
+			f_g += directed_difference (DevArraysPtr->P_g+local, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, 'z');
 
 		}
 
-		if ((gpu_def->Nx) < 2)
-		{
-			fx_w = 0.;
-			fx_n = 0.;
-			fx_g = 0.;
-		}
-		else
-		{
-			x2 = -1. * right_difference (DevArraysPtr->P_w+local, 'x'); //-(DevArraysPtr->P_w[i + 1 + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy)] - Pw) / gpu_def->hx;
-			x1 = -1. * left_difference (DevArraysPtr->P_w+local, 'x'); //-(Pw - DevArraysPtr->P_w[i - 1 + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy)]) / gpu_def->hx;
-			fx_w = directed_difference (x1, x2, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, 'x');
-
-			x2 = -1. * right_difference (DevArraysPtr->P_n+local, 'x');
-			x1 = -1. * left_difference (DevArraysPtr->P_n+local, 'x');
-			fx_n = directed_difference (x1, x2, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, 'x');
-
-			x2 = -1. * right_difference (DevArraysPtr->P_g+local, 'x');
-			x1 = -1. * left_difference (DevArraysPtr->P_g+local, 'x');
-			fx_g = directed_difference (x1, x2, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, 'x');
-		}
-
-		y2 = -1. * right_difference (DevArraysPtr->P_w+local, 'y') + gpu_def->g_const * (DevArraysPtr->ro_w[local]);
-		y1 = -1. * left_difference (DevArraysPtr->P_w+local, 'y') + gpu_def->g_const * (DevArraysPtr->ro_w[local]);
-		fy_w = directed_difference (y1, y2, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, 'y');
-
-		y2 = -1. * right_difference (DevArraysPtr->P_n+local, 'y') + gpu_def->g_const * (DevArraysPtr->ro_n[local]);
-		y1 = -1. * left_difference (DevArraysPtr->P_n+local, 'y') + gpu_def->g_const * (DevArraysPtr->ro_n[local]);
-		fy_n = directed_difference (y1, y2, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, 'y');
-
-		A1 = DevArraysPtr->roS_w[local] - (gpu_def->dt / DevArraysPtr->m[local]) * (-q_w + fx_w + fy_w + fz_w);
-		A2 = DevArraysPtr->roS_n[local] - (gpu_def->dt / DevArraysPtr->m[local]) * (-q_n + fx_n + fy_n + fz_n);
+		A1 = DevArraysPtr->roS_w[local] + (gpu_def->dt / DevArraysPtr->m[local]) * (q_w - f_w);
+		A2 = DevArraysPtr->roS_n[local] + (gpu_def->dt / DevArraysPtr->m[local]) * (q_n - f_n);
+		A3 = DevArraysPtr->roS_g[local] + (gpu_def->dt / DevArraysPtr->m[local]) * (q_g - f_g);
 
 		DevArraysPtr->roS_w_old[local] = DevArraysPtr->roS_w[local];
 		DevArraysPtr->roS_n_old[local] = DevArraysPtr->roS_n[local];
+		DevArraysPtr->roS_g_old[local] = DevArraysPtr->roS_g[local];
 		DevArraysPtr->roS_w[local] = A1;
 		DevArraysPtr->roS_n[local] = A2;
+		DevArraysPtr->roS_g[local] = A3;
 
 		device_test_positive(DevArraysPtr->roS_w[local], __FILE__, __LINE__);
 		device_test_positive(DevArraysPtr->roS_n[local], __FILE__, __LINE__);
-
-		y2 = -1. * right_difference (DevArraysPtr->P_g+local, 'y') + gpu_def->g_const * (DevArraysPtr->ro_g[local]);
-		y1 = -1. * left_difference (DevArraysPtr->P_g+local, 'y') + gpu_def->g_const * (DevArraysPtr->ro_g[local]);
-		fy_g = directed_difference (y1, y2, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, 'y');
-
-		A3 = DevArraysPtr->roS_g[local] - (gpu_def->dt / DevArraysPtr->m[local]) * (q_g + fx_g + fy_g + fz_g);
-
-		DevArraysPtr->roS_g_old[local] = DevArraysPtr->roS_g[local];
-		DevArraysPtr->roS_g[local] = A3;
-
 		device_test_positive(DevArraysPtr->roS_g[local], __FILE__, __LINE__);
 	}
 }

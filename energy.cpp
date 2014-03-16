@@ -268,6 +268,44 @@ static double assign_T_flow (int i, int j, int k)
 		return 0;
 }
 
+// Расчет направленной разности
+double directed_difference_E (double* P, double* Xi, double* ro, double* H, char axis)
+{
+	double x1 = 0, x2 = 0;
+	switch (axis)
+	{
+	case 'x':
+		{
+			x2 = right_difference (P, 'x');
+			x1 = left_difference (P, 'x');
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) * (*H) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-1)) * (*(ro-1)) * (*(H-1)) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+1)) * (*(ro+1)) * (*(H+1))) / def.hx;
+		}
+	case 'y':
+		{
+			x2 = right_difference (P, 'y') + def.g_const * (*ro);
+			x1 = left_difference (P, 'y') + def.g_const * (*ro);
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) * (*H) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-def.locNx)) * (*(ro-def.locNx)) * (*(H-def.locNx)) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+def.locNx)) * (*(ro+def.locNx)) * (*(H+def.locNx))) / def.hy;
+		}
+	case 'z':
+		{
+			x2 = right_difference (P, 'z');
+			x1 = left_difference (P, 'z');
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) * (*H) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-def.locNx * (def.locNy))) * (*(ro-def.locNx * (def.locNy))) * (*(H-def.locNx * (def.locNy))) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+def.locNx * (def.locNy))) * (*(ro+def.locNx * (def.locNy))) * (*(H-def.locNx * (def.locNy)))) / def.hz;
+		}
+	default:
+		{
+			print_error("Axis of [directed_difference] conversation is empty", __FILE__, __LINE__);
+			return -1;
+		}
+	}
+}
+
 // Расчет потока энергии в точке
 static double assign_E_flow (int i, int j, int k)
 {
@@ -275,7 +313,26 @@ static double assign_E_flow (int i, int j, int k)
 	{
 		double E_flow = 0;
 		int local=i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
-
+#ifdef NR
+		if ((def.locNx) > 2)
+		{
+			E_flow += (directed_difference_E (HostArraysPtr.P_w+local, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, HostArraysPtr.H_w+local, 'x')
+					 + directed_difference_E (HostArraysPtr.P_n+local, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, HostArraysPtr.H_n+local, 'x')
+					 + directed_difference_E (HostArraysPtr.P_g+local, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, HostArraysPtr.H_g+local, 'x'));
+		}
+		if ((def.locNy) > 2)
+		{
+			E_flow += (directed_difference_E (HostArraysPtr.P_w+local, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, HostArraysPtr.H_w+local, 'y')
+					 + directed_difference_E (HostArraysPtr.P_n+local, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, HostArraysPtr.H_n+local, 'y')
+					 + directed_difference_E (HostArraysPtr.P_g+local, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, HostArraysPtr.H_g+local, 'y'));
+		}
+		if ((def.locNz) > 2)
+		{
+			E_flow += (directed_difference_E (HostArraysPtr.P_w+local, HostArraysPtr.Xi_w+local, HostArraysPtr.ro_w+local, HostArraysPtr.H_w+local, 'z')
+					 + directed_difference_E (HostArraysPtr.P_n+local, HostArraysPtr.Xi_n+local, HostArraysPtr.ro_n+local, HostArraysPtr.H_n+local, 'z')
+					 + directed_difference_E (HostArraysPtr.P_g+local, HostArraysPtr.Xi_g+local, HostArraysPtr.ro_g+local, HostArraysPtr.H_g+local, 'z'));
+		}
+#else
 		if ((def.locNx) > 2)
 		{
 			E_flow += (HostArraysPtr.ro_w[local + 1] * HostArraysPtr.H_w[local + 1] * HostArraysPtr.ux_w[local + 1]
@@ -294,9 +351,8 @@ static double assign_E_flow (int i, int j, int k)
 			- HostArraysPtr.ro_n[local - def.locNx] * HostArraysPtr.H_n[local - def.locNx] * HostArraysPtr.uy_n[local - def.locNx]
 			+ HostArraysPtr.ro_g[local + def.locNx] * HostArraysPtr.H_g[local + def.locNx] * HostArraysPtr.uy_g[local + def.locNx]
 			- HostArraysPtr.ro_g[local - def.locNx] * HostArraysPtr.H_g[local - def.locNx] * HostArraysPtr.uy_g[local - def.locNx]
-			)/ (2. * (def.hy));	
+			)/ (2. * (def.hy));
 		}
-
 		if ((def.locNz) > 2)
 		{
 			E_flow += (HostArraysPtr.ro_w[local + (def.locNx) * (def.locNy)] * HostArraysPtr.H_w[local + (def.locNx) * (def.locNy)] * HostArraysPtr.uy_w[local + (def.locNx) * (def.locNy)]
@@ -305,9 +361,9 @@ static double assign_E_flow (int i, int j, int k)
 			- HostArraysPtr.ro_n[local - (def.locNx) * (def.locNy)] * HostArraysPtr.H_n[local - (def.locNx) * (def.locNy)] * HostArraysPtr.uy_n[local - (def.locNx) * (def.locNy)]
 			+ HostArraysPtr.ro_g[local + (def.locNx) * (def.locNy)] * HostArraysPtr.H_g[local + (def.locNx) * (def.locNy)] * HostArraysPtr.uy_g[local + (def.locNx) * (def.locNy)]
 			- HostArraysPtr.ro_g[local - (def.locNx) * (def.locNy)] * HostArraysPtr.H_g[local - (def.locNx) * (def.locNy)] * HostArraysPtr.uy_g[local - (def.locNx) * (def.locNy)]
-			)/ (2. * (def.hz));	
+			)/ (2. * (def.hz));
 		}
-
+#endif
 		test_u(E_flow, __FILE__, __LINE__);
 		return E_flow;
 	}

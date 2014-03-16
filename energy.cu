@@ -266,15 +266,71 @@ __device__ double assign_T_flow (int i, int j, int k)
 		return 0;
 }
 
+// Расчет направленной разности
+__device__ double directed_difference_E (double* P, double* Xi, double* ro, double* H, char axis)
+{
+	double x1 = 0, x2 = 0;
+	switch (axis)
+	{
+	case 'x':
+		{
+			x2 = device_right_difference (P, 'x');
+			x1 = device_left_difference (P, 'x');
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) * (*H) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-1)) * (*(ro-1)) * (*(H-1)) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+1)) * (*(ro+1)) * (*(H+1))) / gpu_def->hx;
+		}
+	case 'y':
+		{
+			x2 = device_right_difference (P, 'y') + gpu_def->g_const * (*ro);
+			x1 = device_left_difference (P, 'y') + gpu_def->g_const * (*ro);
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) * (*H) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-gpu_def->locNx)) * (*(ro-gpu_def->locNx)) * (*(H-gpu_def->locNx)) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+gpu_def->locNx)) * (*(ro+gpu_def->locNx)) * (*(H+gpu_def->locNx))) / gpu_def->hy;
+		}
+	case 'z':
+		{
+			x2 = device_right_difference (P, 'z');
+			x1 = device_left_difference (P, 'z');
+			return (((x2 + fabs(x2)) / 2. - (x1 - fabs(x1)) / 2.) * (*Xi) * (*ro) * (*H) -
+		      (x1 + fabs(x1)) / 2. * (*(Xi-gpu_def->locNx * (gpu_def->locNy))) * (*(ro-gpu_def->locNx * (gpu_def->locNy))) * (*(H-gpu_def->locNx * (gpu_def->locNy))) +
+		      (x2 - fabs(x2)) / 2. * (*(Xi+gpu_def->locNx * (gpu_def->locNy))) * (*(ro+gpu_def->locNx * (gpu_def->locNy))) * (*(H-gpu_def->locNx * (gpu_def->locNy)))) / gpu_def->hz;
+		}
+	default:
+		{
+			device_print_error("wrong axis", __FILE__, __LINE__);
+			return -1;
+		}
+	}
+}
+
 // Расчет потока энергии в точке
 __device__ double assign_E_flow (int i, int j, int k)
 {
-	
 	if (GPU_INTERNAL_POINT)
 	{
 		double E_flow = 0;
 		int local=i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
-
+#ifdef NR
+		if ((gpu_def->locNx) > 2)
+		{
+			E_flow += (directed_difference_E (DevArraysPtr->P_w+local, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, DevArraysPtr->H_w+local, 'x')
+					 + directed_difference_E (DevArraysPtr->P_n+local, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, DevArraysPtr->H_n+local, 'x')
+					 + directed_difference_E (DevArraysPtr->P_g+local, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, DevArraysPtr->H_g+local, 'x'));
+		}
+		if ((gpu_def->locNy) > 2)
+		{
+			E_flow += (directed_difference_E (DevArraysPtr->P_w+local, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, DevArraysPtr->H_w+local, 'y')
+					 + directed_difference_E (DevArraysPtr->P_n+local, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, DevArraysPtr->H_n+local, 'y')
+					 + directed_difference_E (DevArraysPtr->P_g+local, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, DevArraysPtr->H_g+local, 'y'));
+		}
+		if ((gpu_def->locNz) > 2)
+		{
+			E_flow += (directed_difference_E (DevArraysPtr->P_w+local, DevArraysPtr->Xi_w+local, DevArraysPtr->ro_w+local, DevArraysPtr->H_w+local, 'z')
+					 + directed_difference_E (DevArraysPtr->P_n+local, DevArraysPtr->Xi_n+local, DevArraysPtr->ro_n+local, DevArraysPtr->H_n+local, 'z')
+					 + directed_difference_E (DevArraysPtr->P_g+local, DevArraysPtr->Xi_g+local, DevArraysPtr->ro_g+local, DevArraysPtr->H_g+local, 'z'));
+		}
+#else
 		if ((gpu_def->locNx) > 2)
 		{
 			E_flow += (DevArraysPtr->ro_w[local + 1] * DevArraysPtr->H_w[local + 1] * DevArraysPtr->ux_w[local + 1]
@@ -306,7 +362,7 @@ __device__ double assign_E_flow (int i, int j, int k)
 			- DevArraysPtr->ro_g[local - (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr->H_g[local - (gpu_def->locNx) * (gpu_def->locNy)] * DevArraysPtr->uy_g[local - (gpu_def->locNx) * (gpu_def->locNy)]
 			)/ (2. * (gpu_def->hz));	
 		}
-
+#endif
 		device_test_u(E_flow, __FILE__, __LINE__);
 		return E_flow;
 	}
