@@ -35,7 +35,7 @@ void test_nan(double x, const char *file, int line)
 #ifdef MY_TEST
 	if (isnan(x))
 	{
-		printf("Error: NaN\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("NaN", file, line);
 	}
 	// Тестовое более жесткое ограничение именно для этой задачи
 	/*if (x > 1e30 || x < -1e30)
@@ -53,11 +53,11 @@ void test_positive(double x, const char *file, int line)
 #ifdef MY_TEST
 	if (isnan(x))
 	{
-		printf("Error: NaN\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("NaN", file, line);
 	}
 	if (x < 0)
 	{
-		printf("Error: x<0\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("x<0", file, line);
 	}
 #endif
 }
@@ -69,15 +69,15 @@ void test_S(double S, const char *file, int line)
 #ifdef MY_TEST
 	if (isnan(S))
 	{
-		printf("Error: S=NaN\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("NaN", file, line);
 	}
 	if (S < 0)
 	{
-		printf("Error: S<0\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("S<0", file, line);
 	}
 	if (S > 1)
 	{
-		printf("Error: S>1\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("S>1", file, line);
 	}
 #endif
 }
@@ -89,15 +89,15 @@ void test_u(double u, const char *file, int line)
 #ifdef MY_TEST
 	if (isnan(u))
 	{
-		printf("Error: u=NaN\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("NaN", file, line);
 	}
 	if (u < -1e8)
 	{
-		printf("Error: u<-100\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("u < -1e8", file, line);
 	}
 	if (u > 1e8)
 	{
-		printf("Error: u>100\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("u > 1e8", file, line);
 	}
 #endif
 }
@@ -110,15 +110,15 @@ void test_ro(double ro, const char *file, int line)
 #ifdef MY_TEST
 	if (isnan(ro))
 	{
-		printf("Error: ro = NaN\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("NaN", file, line);
 	}
 	if (ro < 0)
 	{
-		printf("Error: ro < 0\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("ro < 0", file, line);
 	}
 	if (ro > 1e8)
 	{
-		printf("Error: ro > 1500\nFile:\"%s\"\nLine:\"%d\"\n\n", file, line);
+		print_error("ro > 1e8", file, line);
 	}
 #endif
 }
