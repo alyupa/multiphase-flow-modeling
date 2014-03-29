@@ -609,7 +609,7 @@ __global__ void assign_roS_kernel(double t)
 		double q_w = 0., q_n = 0., q_g = 0.;
 
 		// Значения q на скважинах
-		wells_q(i, j, k, &q_w, &q_n, &q_g);
+		device_wells_q(i, j, k, &q_w, &q_n, &q_g);
 
 		if ((t < 2 * (gpu_def->dt)) || TWO_LAYERS)
 		{
