@@ -14,12 +14,15 @@ if [ -z "$2" ]; then
 fi
 
 exe_name="$1_$2"
+src_dir="../src"
+mkdir -p ../Debug
+cd ${src_dir}
 
 # Energy mode
 if [ "$3" = "energy" ]; then
 	debug="-D ENERGY"
 	exe_name="${exe_name}_energy"
-	energy="../energy.cpp"
+	energy="energy.cpp"
 	echo "Energy is enabled"
 else
 	energy=""
@@ -49,14 +52,14 @@ else 	if [ "$hostname" = "k100" ]; then
 	fi
 fi
 
-project_file="../three-phase.cpp"
+project_file="three-phase.cpp"
 
 if [ "$1" = "gpu" ]; then
-	echo "nvcc $debug -c -arch sm_$ARCH gpu.o ../gpu.cu"
-		  nvcc $debug -c -arch sm_$ARCH gpu.o ../gpu.cu
-	arch_file="gpu.o"
+	echo "nvcc $debug -c -arch sm_$ARCH -o ../Debug/gpu.o gpu.cu"
+		  nvcc $debug -c -arch sm_$ARCH -o ../Debug/gpu.o gpu.cu
+	arch_file="../Debug/gpu.o"
 else if [ "$1" = "cpu" ]; then
-		arch_file="../cpu.cpp ../gauss.cpp $energy $project_file"
+		arch_file="cpu.cpp gauss.cpp $energy $project_file"
 		lib_path=""
 		PPN=""
 	 else
@@ -66,9 +69,9 @@ else if [ "$1" = "cpu" ]; then
 fi
 
 if [ "$2" = "no" ]; then
-	comm_file="../no_communication.cpp"
+	comm_file="no_communication.cpp"
 else if [ "$2" = "mpi" ]; then
-		comm_file="../mpi.cpp"
+		comm_file="mpi.cpp"
 	else
 		echo "Error in communication: $3 is not supported"
 		exit
@@ -90,10 +93,9 @@ else 	if [ "$hostname" = "mvse" ]; then
 	fi
 fi
 
-mkdir -p ../Debug
 exe_name="$exe_name.px"
 
-echo "$compilator $debug $lib_path ../main.cpp $comm_file ../shared_test.cpp $arch_file -o ../Debug/$exe_name"
-	$compilator $debug $lib_path ../main.cpp $comm_file ../shared_test.cpp $arch_file -o ../Debug/$exe_name
+echo "$compilator $debug $lib_path main.cpp $comm_file shared_test.cpp $arch_file -o ../Debug/$exe_name"
+	$compilator $debug $lib_path main.cpp $comm_file shared_test.cpp $arch_file -o ../Debug/$exe_name
 
 exit
