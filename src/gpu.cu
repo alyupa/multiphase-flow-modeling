@@ -3,14 +3,14 @@
 
 __constant__ consts gpu_def [1];
 __device__ ptr_Arrays DevArraysPtr[1];
-__device__ double *DevBuffer;
-double *DevBufferLoc;
 extern double *HostBuffer;
+extern double *DevBuffer;
+
+#include "gauss.cu"
 
 #include "three-phase.cu"
 
 #ifdef ENERGY
-#include "gauss.cu"
 #include "energy.cu"
 #endif
 
@@ -26,9 +26,9 @@ __device__ void device_assign_ro(int local)
 	DevArraysPtr->ro_n[local] = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (DevArraysPtr->P_n[local] - gpu_def->P_atm) - alfa_n * (DevArraysPtr->T[local] - T_0));
 	DevArraysPtr->ro_g[local] = gpu_def->ro0_g * (DevArraysPtr->P_g[local] / gpu_def->P_atm) * (T_0 / DevArraysPtr->T[local]);
 #else
-	DevArraysPtr->ro_w[local] = def.ro0_w * (1. + (def.beta_w) * (DevArraysPtr->P_w[local] - def.P_atm));
-	DevArraysPtr->ro_n[local] = def.ro0_n * (1. + (def.beta_n) * (DevArraysPtr->P_n[local] - def.P_atm));
-	DevArraysPtr->ro_g[local] = def.ro0_g * DevArraysPtr->P_g[local] / def.P_atm;
+	DevArraysPtr->ro_w[local] = gpu_def->ro0_w * (1. + (gpu_def->beta_w) * (DevArraysPtr->P_w[local] - gpu_def->P_atm));
+	DevArraysPtr->ro_n[local] = gpu_def->ro0_n * (1. + (gpu_def->beta_n) * (DevArraysPtr->P_n[local] - gpu_def->P_atm));
+	DevArraysPtr->ro_g[local] = gpu_def->ro0_g * DevArraysPtr->P_g[local] / gpu_def->P_atm;
 #endif
 	device_test_positive(DevArraysPtr->ro_g[local], __FILE__, __LINE__);
 	device_test_positive(DevArraysPtr->ro_w[local], __FILE__, __LINE__);
@@ -707,8 +707,7 @@ void device_memory_allocation()
 		buffer_size = (def.locNx) * (def.locNy);
 
 	if(buffer_size) {
-	//	cudaMalloc((void**) &DevBufferLoc, buffer_size * sizeof(double));
-	//	cudaMemcpyToSymbol(DevBuffer, &DevBufferLoc,  buffer_size * sizeof(double), 0, cudaMemcpyHostToDevice);
+		cudaMalloc((void**) &DevBuffer, buffer_size * sizeof(double));
 	}
 
 	int sz = (def.locNx) * (def.locNy) * (def.locNz) * sizeof(double);
@@ -800,7 +799,7 @@ void device_memory_allocation()
 // Освобожение памяти ускорителя из под массива точек расчетной области
 void device_memory_free()
 {
-//	cudaFree(DevBufferLoc);
+	cudaFree(DevBuffer);
 	cudaFree((double*)(DevArraysPtrLoc->P_w));
 	cudaFree((double*)(DevArraysPtrLoc->P_n));
 	cudaFree((double*)(DevArraysPtrLoc->S_n));
@@ -929,7 +928,7 @@ void device_finalization(void)
 {
 }
 
-__global__ void load_exchange_data_part_xl_kernel(double* DevArray)
+__global__ void load_exchange_data_part_xl_kernel(double* DevArray, double* DevBuffer)
 {
 	int j = threadIdx.x + blockIdx.x * blockDim.x;
 	int k = threadIdx.y + blockIdx.y * blockDim.y;
@@ -941,7 +940,7 @@ __global__ void load_exchange_data_part_xl_kernel(double* DevArray)
 	}
 }
 
-__global__ void load_exchange_data_part_xr_kernel(double* DevArray)
+__global__ void load_exchange_data_part_xr_kernel(double* DevArray, double* DevBuffer)
 {
 	int j = threadIdx.x + blockIdx.x * blockDim.x;
 	int k = threadIdx.y + blockIdx.y * blockDim.y;
@@ -953,7 +952,7 @@ __global__ void load_exchange_data_part_xr_kernel(double* DevArray)
 	}
 }
 
-__global__ void load_exchange_data_part_yl_kernel(double* DevArray)
+__global__ void load_exchange_data_part_yl_kernel(double* DevArray, double* DevBuffer)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int k = threadIdx.y + blockIdx.y * blockDim.y;
@@ -965,7 +964,7 @@ __global__ void load_exchange_data_part_yl_kernel(double* DevArray)
 	}
 }
 
-__global__ void load_exchange_data_part_yr_kernel(double* DevArray)
+__global__ void load_exchange_data_part_yr_kernel(double* DevArray, double* DevBuffer)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int k = threadIdx.y + blockIdx.y * blockDim.y;
@@ -977,7 +976,7 @@ __global__ void load_exchange_data_part_yr_kernel(double* DevArray)
 	}
 }
 
-__global__ void load_exchange_data_part_zl_kernel(double* DevArray)
+__global__ void load_exchange_data_part_zl_kernel(double* DevArray, double* DevBuffer)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -989,7 +988,7 @@ __global__ void load_exchange_data_part_zl_kernel(double* DevArray)
 	}
 }
 
-__global__ void load_exchange_data_part_zr_kernel(double* DevArray)
+__global__ void load_exchange_data_part_zr_kernel(double* DevArray, double* DevBuffer)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -1003,60 +1002,59 @@ __global__ void load_exchange_data_part_zr_kernel(double* DevArray)
 
 void load_exchange_data_part_xl(double* DevArray)
 {
-/*	load_exchange_data_part_xl_kernel <<< dim3(def.blocksY, def.blocksZ), dim3(BlockNY, BlockNZ)>>>(DevArray);
+	load_exchange_data_part_xl_kernel <<< dim3(def.blocksY, def.blocksZ), dim3(BlockNY, BlockNZ)>>>(DevArray, DevBuffer);
 	checkErrors("load_exchange_data_part_xl", __FILE__, __LINE__);
 
-	cudaMemcpy(HostBuffer, DevBufferLoc, (def.locNy) * (def.locNz) * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(HostBuffer, DevBuffer, (def.locNy) * (def.locNz) * sizeof(double), cudaMemcpyDeviceToHost);
 	checkErrors("copy data to host", __FILE__, __LINE__);
-	*/
 }
 
 void load_exchange_data_part_xr(double* DevArray)
 {
-/*	load_exchange_data_part_xr_kernel <<< dim3(def.blocksY, def.blocksZ), dim3(BlockNY, BlockNZ)>>>(DevArray);
+	load_exchange_data_part_xr_kernel <<< dim3(def.blocksY, def.blocksZ), dim3(BlockNY, BlockNZ)>>>(DevArray, DevBuffer);
 	checkErrors("load_exchange_data_part_xr", __FILE__, __LINE__);
 
-	cudaMemcpy(HostBuffer, DevBufferLoc, (def.locNy) * (def.locNz) * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(HostBuffer, DevBuffer, (def.locNy) * (def.locNz) * sizeof(double), cudaMemcpyDeviceToHost);
 	checkErrors("copy data to host", __FILE__, __LINE__);
-*/}
+}
 
 void load_exchange_data_part_yl(double* DevArray)
 {
-/*	load_exchange_data_part_yl_kernel <<< dim3(def.blocksX, def.blocksZ), dim3(BlockNX, BlockNZ)>>>(DevArray);
+	load_exchange_data_part_yl_kernel <<< dim3(def.blocksX, def.blocksZ), dim3(BlockNX, BlockNZ)>>>(DevArray, DevBuffer);
 	checkErrors("load_exchange_data_part_yl", __FILE__, __LINE__);
 
-	cudaMemcpy(HostBuffer, DevBufferLoc, (def.locNx) * (def.locNz) * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(HostBuffer, DevBuffer, (def.locNx) * (def.locNz) * sizeof(double), cudaMemcpyDeviceToHost);
 	checkErrors("copy data to host", __FILE__, __LINE__);
-*/}
+}
 
 void load_exchange_data_part_yr(double* DevArray)
 {
-/*	load_exchange_data_part_yr_kernel <<< dim3(def.blocksX, def.blocksZ), dim3(BlockNX, BlockNZ)>>>(DevArray);
+	load_exchange_data_part_yr_kernel <<< dim3(def.blocksX, def.blocksZ), dim3(BlockNX, BlockNZ)>>>(DevArray, DevBuffer);
 	checkErrors("load_exchange_data_part_yr", __FILE__, __LINE__);
 
-	cudaMemcpy(HostBuffer, DevBufferLoc, (def.locNx) * (def.locNz) * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(HostBuffer, DevBuffer, (def.locNx) * (def.locNz) * sizeof(double), cudaMemcpyDeviceToHost);
 	checkErrors("copy data to host", __FILE__, __LINE__);
-*/}
+}
 
 void load_exchange_data_part_zl(double* DevArray)
 {
-/*	load_exchange_data_part_zl_kernel <<< dim3(def.blocksX, def.blocksY), dim3(BlockNX, BlockNY)>>>(DevArray);
+	load_exchange_data_part_zl_kernel <<< dim3(def.blocksX, def.blocksY), dim3(BlockNX, BlockNY)>>>(DevArray, DevBuffer);
 	checkErrors("load_exchange_data_part_zl", __FILE__, __LINE__);
 	
-	cudaMemcpy(HostBuffer, DevBufferLoc, (def.locNx) * (def.locNy) * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(HostBuffer, DevBuffer, (def.locNx) * (def.locNy) * sizeof(double), cudaMemcpyDeviceToHost);
 	checkErrors("copy data to host", __FILE__, __LINE__);
-*/}
+}
 
 void load_exchange_data_part_zr(double* DevArray)
 {
-/*	load_exchange_data_part_zr_kernel <<< dim3(def.blocksX, def.blocksY), dim3(BlockNX, BlockNY)>>>(DevArray);
+	load_exchange_data_part_zr_kernel <<< dim3(def.blocksX, def.blocksY), dim3(BlockNX, BlockNY)>>>(DevArray, DevBuffer);
 	checkErrors("load_exchange_data_part_zr", __FILE__, __LINE__);
 
-	cudaMemcpy(HostBuffer, DevBufferLoc, (def.locNx) * (def.locNy) * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(HostBuffer, DevBuffer, (def.locNx) * (def.locNy) * sizeof(double), cudaMemcpyDeviceToHost);
 	checkErrors("copy data to host", __FILE__, __LINE__);
-*/}
+}
 
-__global__ void save_exchange_data_part_xl_kernel(double* DevArray)
+__global__ void save_exchange_data_part_xl_kernel(double* DevArray, double* DevBuffer)
 {
 	int j = threadIdx.x + blockIdx.x * blockDim.x;
 	int k = threadIdx.y + blockIdx.y * blockDim.y;
@@ -1068,7 +1066,7 @@ __global__ void save_exchange_data_part_xl_kernel(double* DevArray)
 	}
 }
 
-__global__ void save_exchange_data_part_xr_kernel(double* DevArray)
+__global__ void save_exchange_data_part_xr_kernel(double* DevArray, double* DevBuffer)
 {
 	int j = threadIdx.x + blockIdx.x * blockDim.x;
 	int k = threadIdx.y + blockIdx.y * blockDim.y;
@@ -1080,7 +1078,7 @@ __global__ void save_exchange_data_part_xr_kernel(double* DevArray)
 	}
 }
 
-__global__ void save_exchange_data_part_yl_kernel(double* DevArray)
+__global__ void save_exchange_data_part_yl_kernel(double* DevArray, double* DevBuffer)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int k = threadIdx.y + blockIdx.y * blockDim.y;
@@ -1092,7 +1090,7 @@ __global__ void save_exchange_data_part_yl_kernel(double* DevArray)
 	}
 }
 
-__global__ void save_exchange_data_part_yr_kernel(double* DevArray)
+__global__ void save_exchange_data_part_yr_kernel(double* DevArray, double* DevBuffer)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int k = threadIdx.y + blockIdx.y * blockDim.y;
@@ -1104,7 +1102,7 @@ __global__ void save_exchange_data_part_yr_kernel(double* DevArray)
 	}
 }
 
-__global__ void save_exchange_data_part_zl_kernel(double* DevArray)
+__global__ void save_exchange_data_part_zl_kernel(double* DevArray, double* DevBuffer)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -1116,7 +1114,7 @@ __global__ void save_exchange_data_part_zl_kernel(double* DevArray)
 	}
 }
 
-__global__ void save_exchange_data_part_zr_kernel(double* DevArray)
+__global__ void save_exchange_data_part_zr_kernel(double* DevArray, double* DevBuffer)
 {
 	int i = threadIdx.x + blockIdx.x * blockDim.x;
 	int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -1130,54 +1128,54 @@ __global__ void save_exchange_data_part_zr_kernel(double* DevArray)
 
 void save_exchange_data_part_xl(double* DevArray)
 {
-/*	cudaMemcpy(DevBufferLoc, HostBuffer, (def.locNy) * (def.locNz)*sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(DevBuffer, HostBuffer, (def.locNy) * (def.locNz)*sizeof(double), cudaMemcpyHostToDevice);
 	checkErrors("copy data to device", __FILE__, __LINE__);
 
-	save_exchange_data_part_xl_kernel <<< dim3(def.blocksY, def.blocksZ), dim3(BlockNY, BlockNZ)>>>(DevArray);
+	save_exchange_data_part_xl_kernel <<< dim3(def.blocksY, def.blocksZ), dim3(BlockNY, BlockNZ)>>>(DevArray, DevBuffer);
 	checkErrors("save_exchange_data_part_xl", __FILE__, __LINE__);
-*/}
+}
 
 void save_exchange_data_part_xr(double* DevArray)
 {
-/*	cudaMemcpy(DevBufferLoc, HostBuffer, (def.locNy) * (def.locNz)*sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(DevBuffer, HostBuffer, (def.locNy) * (def.locNz)*sizeof(double), cudaMemcpyHostToDevice);
 	checkErrors("copy data to device", __FILE__, __LINE__);
 
-	save_exchange_data_part_xr_kernel <<< dim3(def.blocksY, def.blocksZ), dim3(BlockNY, BlockNZ)>>>(DevArray);
+	save_exchange_data_part_xr_kernel <<< dim3(def.blocksY, def.blocksZ), dim3(BlockNY, BlockNZ)>>>(DevArray, DevBuffer);
 	checkErrors("save_exchange_data_part_xr", __FILE__, __LINE__);
-*/}
+}
 
 void save_exchange_data_part_yl(double* DevArray)
 {
-/*	cudaMemcpy(DevBufferLoc, HostBuffer, (def.locNx) * (def.locNz)*sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(DevBuffer, HostBuffer, (def.locNx) * (def.locNz)*sizeof(double), cudaMemcpyHostToDevice);
 	checkErrors("copy data to device", __FILE__, __LINE__);
 
-	save_exchange_data_part_yl_kernel <<< dim3(def.blocksX, def.blocksZ), dim3(BlockNX, BlockNZ)>>>(DevArray);
+	save_exchange_data_part_yl_kernel <<< dim3(def.blocksX, def.blocksZ), dim3(BlockNX, BlockNZ)>>>(DevArray, DevBuffer);
 	checkErrors("save_exchange_data_part_yl", __FILE__, __LINE__);
-*/}
+}
 
 void save_exchange_data_part_yr(double* DevArray)
 {
-/*	cudaMemcpy(DevBufferLoc, HostBuffer, (def.locNx) * (def.locNz)*sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(DevBuffer, HostBuffer, (def.locNx) * (def.locNz)*sizeof(double), cudaMemcpyHostToDevice);
 	checkErrors("copy data to device", __FILE__, __LINE__);
 
-	save_exchange_data_part_yr_kernel <<< dim3(def.blocksX, def.blocksZ), dim3(BlockNX, BlockNZ)>>>(DevArray);
+	save_exchange_data_part_yr_kernel <<< dim3(def.blocksX, def.blocksZ), dim3(BlockNX, BlockNZ)>>>(DevArray, DevBuffer);
 	checkErrors("save_exchange_data_part_yr", __FILE__, __LINE__);
-*/}
+}
 
 void save_exchange_data_part_zl(double* DevArray)
 {
-/*	cudaMemcpy(DevBufferLoc, HostBuffer, (def.locNx) * (def.locNy)*sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(DevBuffer, HostBuffer, (def.locNx) * (def.locNy)*sizeof(double), cudaMemcpyHostToDevice);
 	checkErrors("copy data to device", __FILE__, __LINE__);
 
-	save_exchange_data_part_zl_kernel <<< dim3(def.blocksX, def.blocksY), dim3(BlockNX, BlockNY)>>>(DevArray);
+	save_exchange_data_part_zl_kernel <<< dim3(def.blocksX, def.blocksY), dim3(BlockNX, BlockNY)>>>(DevArray, DevBuffer);
 	checkErrors("save_exchange_data_part_zl", __FILE__, __LINE__);
-*/}
+}
 
 void save_exchange_data_part_zr(double* DevArray)
 {
-/*	cudaMemcpy(DevBufferLoc, HostBuffer, (def.locNx) * (def.locNy)*sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(DevBuffer, HostBuffer, (def.locNx) * (def.locNy)*sizeof(double), cudaMemcpyHostToDevice);
 	checkErrors("copy data to device", __FILE__, __LINE__);
 
-	save_exchange_data_part_zr_kernel <<< dim3(def.blocksX, def.blocksY), dim3(BlockNX, BlockNY)>>>(DevArray);
+	save_exchange_data_part_zr_kernel <<< dim3(def.blocksX, def.blocksY), dim3(BlockNX, BlockNY)>>>(DevArray, DevBuffer);
 	checkErrors("save_exchange_data_part_zr", __FILE__, __LINE__);
-*/}
+}

@@ -1,6 +1,7 @@
 #include "defines.h"
 
 double *HostBuffer;
+double *DevBuffer;
 consts def;
 ptr_Arrays HostArraysPtr;
 ptr_Arrays DevArraysPtrLoc[1];
