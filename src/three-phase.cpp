@@ -267,8 +267,8 @@ void Newton(int i, int j, int k)
 
 		for (int w = 1; w <= def.newton_iterations; w++)
 		{
-			S_w_e = assign_S_w_e(HostArraysPtr, local);
-			S_n_e = assign_S_n_e(HostArraysPtr, local);
+			S_w_e = assign_S_w_e(local);
+			S_n_e = assign_S_n_e(local);
 			S_g_e = 1. - S_w_e - S_n_e;
 
 			Pk_nw = assign_P_k_nw(S_w_e);
@@ -363,15 +363,20 @@ void Border_P(int i, int j, int k)
 		}
 		else if (j == 0)
 		{
+			HostArraysPtr.P_w[local] = 1.1 * def.P_atm;
+			HostArraysPtr.P_n[local] = 1.1 * def.P_atm;
+			HostArraysPtr.P_g[local] = 1.1 * def.P_atm;
+
 			/*if((i > (def.locNx) / 3) && (i < 2 * (def.locNx) / 3) && (((def.locNz) < 2) || (k > (def.locNz) / 3) && (k < 2 * (def.locNz) / 3)))
-			{
+			{*/
 				//Открытая верхняя граница
-				HostArraysPtr.P_w[local] = def.P_atm;
+			/*	HostArraysPtr.P_w[local] = def.P_atm;
 				HostArraysPtr.P_n[local] = def.P_atm;
 				HostArraysPtr.P_g[local] = def.P_atm;
-			}
+			*/
+			/*}
 			else*/
-			{
+			/*{
 				// Условия непротекания
 				HostArraysPtr.P_w[local] = (HostArraysPtr.P_w[local1]
 				- (def.ro0_w) * (def.g_const) * (def.hy) * (1. - (def.beta_w) * (def.P_atm))) 
@@ -381,24 +386,78 @@ void Border_P(int i, int j, int k)
 					/ (1. + (def.beta_n) * (def.ro0_n) * (def.g_const) * (def.hy));
 				HostArraysPtr.P_g[local] = (HostArraysPtr.P_w[local1]
 				+ Pk_nw + Pk_gn) / (1. + (def.ro0_g) * (def.g_const) * (def.hy) / (def.P_atm));
-			}
+			}*/
 		}
 		else
 		{
+			HostArraysPtr.P_w[local] = def.P_atm;
+			HostArraysPtr.P_n[local] = def.P_atm;
+			HostArraysPtr.P_g[local] = def.P_atm;
+
+			/*HostArraysPtr.P_w[local] = 1.1 * def.P_atm;
+			HostArraysPtr.P_n[local] = 1.1 * def.P_atm;
+			HostArraysPtr.P_g[local] = 1.1 * def.P_atm;*/
+
+			// Условия непротекания (normal u = 0)
+/*#ifdef ENERGY
 			HostArraysPtr.P_w[local] = (HostArraysPtr.P_w[local1]
-			+ (def.ro0_w) * (def.g_const) * (def.hy) * (1. - (def.beta_w) * (def.P_atm))) 
+			+ (def.ro0_w) * (def.g_const) * (def.hy) * (1. - (def.beta_w) * (def.P_atm))
+			- (def.alfa_w) * (HostArraysPtr.T[local] - def.T_0))
 				/ (1. - (def.beta_w) * (def.ro0_w) * (def.g_const) * (def.hy));
 			HostArraysPtr.P_n[local] = (HostArraysPtr.P_w[local1]
-			+ Pk_nw + (def.ro0_n) * (def.g_const) * (def.hy) * (1. - (def.beta_n) * (def.P_atm))) 
+			+ Pk_nw + (def.ro0_n) * (def.g_const) * (def.hy) * (1. - (def.beta_n) * (def.P_atm))
+			- (def.alfa_n) * (HostArraysPtr.T[local] - def.T_0))
 				/ (1. - (def.beta_n) * (def.ro0_n) * (def.g_const) * (def.hy));
 			HostArraysPtr.P_g[local] = (HostArraysPtr.P_w[local1]
+			+ Pk_nw + Pk_gn) / (1. - (def.ro0_g) * (def.g_const) * (def.hy) * (def.T_0)
+				/ ((def.P_atm) * HostArraysPtr.T[local]));
+#else
+			HostArraysPtr.P_w[local] = (HostArraysPtr.P_w[local1]
+			+ (def.ro0_w) * (def.g_const) * (def.hy) * (1. - (def.beta_w) * (def.P_atm)))
+				/ (1. + (def.beta_w) * (def.ro0_w) * (def.g_const) * (def.hy));
+			HostArraysPtr.P_n[local] = (HostArraysPtr.P_w[local1]
+			+ Pk_nw + (def.ro0_n) * (def.g_const) * (def.hy) * (1. - (def.beta_n) * (def.P_atm)))
+				/ (1. + (def.beta_n) * (def.ro0_n) * (def.g_const) * (def.hy));
+			HostArraysPtr.P_g[local] = (HostArraysPtr.P_w[local1]
 			+ Pk_nw + Pk_gn) / (1. - (def.ro0_g) * (def.g_const) * (def.hy) / (def.P_atm));
+#endif*/
 		}
 		test_positive(HostArraysPtr.P_w[local], __FILE__, __LINE__);
 		test_positive(HostArraysPtr.P_n[local], __FILE__, __LINE__);
 		test_positive(HostArraysPtr.P_g[local], __FILE__, __LINE__);
 	}
 }
+
+#ifdef ENERGY
+// Задание граничных условий на температуру
+void Border_T(int i, int j, int k)
+{
+	if (BOUNDARY_POINT)
+	{
+		int local1 = set_boundary_basic_coordinate(i, j, k);
+		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
+
+		if (j == 0)
+		{
+			//HostArraysPtr.T[local] = 400;
+			//HostArraysPtr.T[local] = 285;
+			HostArraysPtr.T[local] = 320;
+		}
+		//else if(j == (def.locNy) - 1)
+		//{
+			//HostArraysPtr.T[local] = 273;
+			//HostArraysPtr.T[local] = 285;
+		//}
+		else
+		{
+			// Будем считать границы области не теплопроводящими
+			HostArraysPtr.T[local] = HostArraysPtr.T[local1];
+		}
+
+		test_positive(HostArraysPtr.T[local], __FILE__, __LINE__);
+	}
+}
+#endif
 
 // Является ли точка нагнетательной скважиной
 int is_injection_well(int i, int j, int k)
@@ -419,6 +478,12 @@ void wells_q(int i, int j, int k, double* q_w, double* q_n, double* q_g)
 	*q_w = 0.0;
 	*q_g = 0.0;
 	*q_n = 0.0;
+
+/*	int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
+
+	if (local_to_global(j, 'y') == 1 && (HostArraysPtr.S_w[local] <= 0.6))
+		*q_w = 1.0 * (def.dt);
+*/
 }
 
 

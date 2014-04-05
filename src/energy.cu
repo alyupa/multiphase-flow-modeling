@@ -336,7 +336,7 @@ __device__ double assign_E_flow (int i, int j, int k)
 			)/ (2. * (gpu_def->hz));	
 		}
 #endif
-		device_test_u(E_flow, __FILE__, __LINE__);
+		device_test_nan(E_flow, __FILE__, __LINE__);
 		return E_flow;
 	}
 	else
@@ -370,36 +370,6 @@ __global__ void assign_E_new_kernel ()
 		DevArraysPtr->E_new[local] = DevArraysPtr->E[local] + (gpu_def->dt) * (assign_T_flow(i, j, k) + Q_hw + Q_hr - assign_E_flow(i, j, k));
 
 		device_test_nan(DevArraysPtr->E_new[local], __FILE__, __LINE__);
-	}
-}
-
-// Задание граничных условий на температуру
-__global__ void Border_T_kernel()
-{
-	int i = threadIdx.x + blockIdx.x * blockDim.x;
-	int j = threadIdx.y + blockIdx.y * blockDim.y;
-	int k = threadIdx.z + blockIdx.z * blockDim.z;
-	
-	if (GPU_BOUNDARY_POINT)
-	{
-		int local1 = device_set_boundary_basic_coordinate(i, j, k);
-		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
-
-		if (j == 0)
-		{
-			DevArraysPtr->T[local] = 400;
-		}
-		else if(j == (gpu_def->locNy) - 1)
-		{
-			DevArraysPtr->T[local] = 273;
-		}
-		else
-		{
-			// Будем считать границы области не теплопроводящими
-			DevArraysPtr->T[local] = DevArraysPtr->T[local1];
-		}
-
-		device_test_positive(DevArraysPtr->T[local], __FILE__, __LINE__);
 	}
 }
 

@@ -661,16 +661,16 @@ void find_values_from_partial_equations(double t)
 // Применение граничных условий
 void boundary_conditions()
 {
+#ifdef ENERGY
+	Border_T_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>();
+	checkErrors("assign T", __FILE__, __LINE__);
+#endif
+
 	Border_S_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>();
 	checkErrors("assign S", __FILE__, __LINE__);
 
 	Border_P_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>();
 	checkErrors("assign Pw", __FILE__, __LINE__);
-
-#ifdef ENERGY
-	Border_T_kernel <<< dim3(def.blocksX, def.blocksY, def.blocksZ), dim3(BlockNX, BlockNY, BlockNZ)>>>();
-	checkErrors("assign T", __FILE__, __LINE__);
-#endif
 }
 
 // Функция загрузки данных в память хоста

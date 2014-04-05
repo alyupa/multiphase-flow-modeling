@@ -336,7 +336,7 @@ static double assign_E_flow (int i, int j, int k)
 			)/ (2. * (def.hz));
 		}
 #endif
-		test_u(E_flow, __FILE__, __LINE__);
+		test_nan(E_flow, __FILE__, __LINE__);
 		return E_flow;
 	}
 	else
@@ -366,32 +366,6 @@ void assign_E_new (int i, int j, int k)
 		HostArraysPtr.E_new[local] = HostArraysPtr.E[local] + (def.dt) * (assign_T_flow(i, j, k) + Q_hw + Q_hr - assign_E_flow(i, j, k));
 
 		test_nan(HostArraysPtr.E_new[local], __FILE__, __LINE__);
-	}
-}
-
-// Задание граничных условий на температуру
-void Border_T(int i, int j, int k)
-{
-	if (BOUNDARY_POINT)
-	{
-		int local1 = set_boundary_basic_coordinate(i, j, k);
-		int local = i + j * (def.locNx) + k * (def.locNx) * (def.locNy);
-
-		if (j == 0)
-		{
-			HostArraysPtr.T[local] = 400;
-		}
-		else if(j == (def.locNy) - 1)
-		{
-			HostArraysPtr.T[local] = 273;
-		}
-		else
-		{
-			// Будем считать границы области не теплопроводящими
-			HostArraysPtr.T[local] = HostArraysPtr.T[local1];
-		}
-
-		test_positive(HostArraysPtr.T[local], __FILE__, __LINE__);
 	}
 }
 

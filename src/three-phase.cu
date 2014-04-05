@@ -281,8 +281,8 @@ __global__ void Newton_method_kernel()
 
 		for (int w = 1; w <= gpu_def->newton_iterations; w++)
 		{
-			S_w_e = device_assign_S_w_e(DevArraysPtr, local);
-			S_n_e = device_assign_S_n_e(DevArraysPtr, local);
+			S_w_e = device_assign_S_w_e(local);
+			S_n_e = device_assign_S_n_e(local);
 			S_g_e = 1. - S_w_e - S_n_e;
 
 			Pk_nw = device_assign_P_k_nw(S_w_e);
@@ -310,7 +310,7 @@ __global__ void Newton_method_kernel()
 			dF[5] = gpu_def->ro0_n * (1. + gpu_def->beta_n * (DevArraysPtr->P_w[local] + Pk_nw - gpu_def->P_atm));
 			dF[8] = (-1) * gpu_def->ro0_g * (DevArraysPtr->P_w[local] + Pk_nw + Pk_gn - Sg * PkSn) / gpu_def->P_atm;
 
-			device_reverse_matrix(dF);
+			device_reverse_matrix(dF, 3);
 
 			DevArraysPtr->P_w[local] = DevArraysPtr->P_w[local]
 			        - (dF[0] * F1 + dF[1] * F2 + dF[2] * F3);
@@ -385,6 +385,10 @@ __global__ void Border_P_kernel()
 		}
 		else if (j == 0)
 		{
+			DevArraysPtr->P_w[local] = 1.1 * gpu_def->P_atm;
+			DevArraysPtr->P_n[local] = 1.1 * gpu_def->P_atm;
+			DevArraysPtr->P_g[local] = 1.1 * gpu_def->P_atm;
+
 			/*if((i > 0) && (i < (gpu_def->locNx) / 3 - 1) && (((gpu_def->locNz) < 2) || (k > 0) && (k < (gpu_def->locNz) / 3 - 1)))
 			{
 				//Открытая верхняя граница
@@ -393,7 +397,7 @@ __global__ void Border_P_kernel()
 				DevArraysPtr->P_g[local] = gpu_def->P_atm;
 			}
 			else*/
-			{
+			/*{
 				// Условия непротекания
 				DevArraysPtr->P_w[local] = (DevArraysPtr->P_w[local1]
 				- (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy) * (1. - (gpu_def->beta_w) * (gpu_def->P_atm))) 
@@ -403,10 +407,28 @@ __global__ void Border_P_kernel()
 					/ (1. + (gpu_def->beta_n) * (gpu_def->ro0_n) * (gpu_def->g_const) * (gpu_def->hy));
 				DevArraysPtr->P_g[local] = (DevArraysPtr->P_w[local1]
 				+ P_k_nw + P_k_gn) / (1. + (gpu_def->ro0_g) * (gpu_def->g_const) * (gpu_def->hy) / (gpu_def->P_atm));
-			}
+			}*/
 		}
 		else
 		{
+			DevArraysPtr->P_w[local] = gpu_def->P_atm;
+			DevArraysPtr->P_n[local] = gpu_def->P_atm;
+			DevArraysPtr->P_g[local] = gpu_def->P_atm;
+
+			// Условия непротекания (normal u = 0)
+/*#ifdef ENERGY
+			DevArraysPtr->P_w[local] = (DevArraysPtr->P_w[local1]
+			+ (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy) * (1. - (gpu_def->beta_w) * (gpu_def->P_atm))
+			- (gpu_def->alfa_w) * (DevArraysPtr->T[local] - gpu_def->T_0))
+				/ (1. - (gpu_def->beta_w) * (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy));
+			DevArraysPtr->P_n[local] = (DevArraysPtr->P_w[local1]
+			+ P_k_nw + (gpu_def->ro0_n) * (gpu_def->g_const) * (gpu_def->hy) * (1. - (gpu_def->beta_n) * (gpu_def->P_atm))
+			- (gpu_def->alfa_n) * (DevArraysPtr->T[local] - gpu_def->T_0))
+				/ (1. - (gpu_def->beta_n) * (gpu_def->ro0_n) * (gpu_def->g_const) * (gpu_def->hy));
+			DevArraysPtr->P_g[local] = (DevArraysPtr->P_w[local1]
+			+ P_k_nw + P_k_gn) / (1. - (gpu_def->ro0_g) * (gpu_def->g_const) * (gpu_def->hy) * (gpu_def->T_0)
+				/ ((gpu_def->P_atm) * DevArraysPtr->T[local]));
+#else
 			DevArraysPtr->P_w[local] = (DevArraysPtr->P_w[local1]
 			+ (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy) * (1. - (gpu_def->beta_w) * (gpu_def->P_atm))) 
 				/ (1. - (gpu_def->beta_w) * (gpu_def->ro0_w) * (gpu_def->g_const) * (gpu_def->hy));
@@ -415,12 +437,45 @@ __global__ void Border_P_kernel()
 				/ (1. - (gpu_def->beta_n) * (gpu_def->ro0_n) * (gpu_def->g_const) * (gpu_def->hy));
 			DevArraysPtr->P_g[local] = (DevArraysPtr->P_w[local1]
 			+ P_k_nw + P_k_gn) / (1. - (gpu_def->ro0_g) * (gpu_def->g_const) * (gpu_def->hy) / (gpu_def->P_atm));
+#endif*/
 		}
 		device_test_positive(DevArraysPtr->P_w[local], __FILE__, __LINE__);
 		device_test_positive(DevArraysPtr->P_n[local], __FILE__, __LINE__);
 		device_test_positive(DevArraysPtr->P_g[local], __FILE__, __LINE__);
 	}
 }
+
+#ifdef ENERGY
+// Задание граничных условий на температуру
+__global__ void Border_T_kernel()
+{
+	int i = threadIdx.x + blockIdx.x * blockDim.x;
+	int j = threadIdx.y + blockIdx.y * blockDim.y;
+	int k = threadIdx.z + blockIdx.z * blockDim.z;
+
+	if (GPU_BOUNDARY_POINT)
+	{
+		int local1 = device_set_boundary_basic_coordinate(i, j, k);
+		int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
+
+		if (j == 0)
+		{
+			DevArraysPtr->T[local] = 320;
+		}
+		//else if(j == (gpu_def->locNy) - 1)
+		//{
+		//	DevArraysPtr->T[local] = 273;
+		//}
+		else
+		{
+			// Будем считать границы области не теплопроводящими
+			DevArraysPtr->T[local] = DevArraysPtr->T[local1];
+		}
+
+		device_test_positive(DevArraysPtr->T[local], __FILE__, __LINE__);
+	}
+}
+#endif
 
 // Является ли точка нагнетательной скважиной
 __device__ int device_is_injection_well(int i, int j, int k)
@@ -440,5 +495,11 @@ __device__ void device_wells_q(int i, int j, int k, double* q_w, double* q_n, do
 	*q_w = 0.0;
 	*q_g = 0.0;
 	*q_n = 0.0;
+
+/*	int local = i + j * (gpu_def->locNx) + k * (gpu_def->locNx) * (gpu_def->locNy);
+
+	if (j == 1 && (DevArraysPtr->S_w[local] <= 0.6))
+		*q_w = 1.0 * gpu_def->dt;
+*/
 }
 

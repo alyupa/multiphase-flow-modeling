@@ -59,11 +59,11 @@ void boundary_conditions()
 			for (int k = 0; k < (def.locNz); k++)
 				if (ACTIVE_POINT)
 				{
-					Border_S(i, j, k);
-					Border_P(i, j, k);
 #ifdef ENERGY
 					Border_T(i, j, k);
 #endif
+					Border_S(i, j, k);
+					Border_P(i, j, k);
 				}
 }
 
