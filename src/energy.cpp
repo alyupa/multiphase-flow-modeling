@@ -409,30 +409,30 @@ void Newton(int i, int j, int k)
 			dF[4 + n] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'T') * HostArraysPtr.S_w[local];
 
 			dF[0 + n * 2] = 0.;
-			dF[1 + n * 2] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n');
+			dF[1 + n * 2] = ro(HostArraysPtr.P_n[local], HostArraysPtr.T[local], 'n');
 			dF[2 + n * 2] = 0.;
-			dF[3 + n * 2] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'P') * HostArraysPtr.S_n[local];
-			dF[4 + n * 2] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'T') * HostArraysPtr.S_n[local];
+			dF[3 + n * 2] = d_ro(HostArraysPtr.P_n[local], HostArraysPtr.T[local], 'n', 'P') * HostArraysPtr.S_n[local];
+			dF[4 + n * 2] = d_ro(HostArraysPtr.P_n[local], HostArraysPtr.T[local], 'n', 'T') * HostArraysPtr.S_n[local];
 
 			dF[0 + n * 3] = 0.;
 			dF[1 + n * 3] = 0.;
-			dF[2 + n * 3] = ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g');
-			dF[3 + n * 3] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'P') * HostArraysPtr.S_g[local];
-			dF[4 + n * 3] = d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T') * HostArraysPtr.S_g[local];
+			dF[2 + n * 3] = ro(HostArraysPtr.P_g[local], HostArraysPtr.T[local], 'g');
+			dF[3 + n * 3] = d_ro(HostArraysPtr.P_g[local], HostArraysPtr.T[local], 'g', 'P') * HostArraysPtr.S_g[local];
+			dF[4 + n * 3] = d_ro(HostArraysPtr.P_g[local], HostArraysPtr.T[local], 'g', 'T') * HostArraysPtr.S_g[local];
 
 			dF[0 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w') * HostArraysPtr.H_w[local] - HostArraysPtr.P_w[local]);
-			dF[1 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n') * HostArraysPtr.H_n[local] - HostArraysPtr.P_w[local]);
-			dF[2 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g') * HostArraysPtr.H_g[local] - HostArraysPtr.P_w[local]);
+			dF[1 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_n[local], HostArraysPtr.T[local], 'n') * HostArraysPtr.H_n[local] - HostArraysPtr.P_n[local]);
+			dF[2 + n * 4] = HostArraysPtr.m[local] * (ro(HostArraysPtr.P_g[local], HostArraysPtr.T[local], 'g') * HostArraysPtr.H_g[local] - HostArraysPtr.P_g[local]);
 			dF[3 + n * 4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'P') * HostArraysPtr.H_w[local] - 1.)
-				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'P') * HostArraysPtr.H_n[local] - 1.)
-				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'P') * HostArraysPtr.H_g[local] - 1.))
+				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_n[local], HostArraysPtr.T[local], 'n', 'P') * HostArraysPtr.H_n[local] - 1.)
+				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_g[local], HostArraysPtr.T[local], 'g', 'P') * HostArraysPtr.H_g[local] - 1.))
 				+ (1. - HostArraysPtr.m[local]) * (-1);
 			dF[4 + n * 4] = HostArraysPtr.m[local] * (HostArraysPtr.S_w[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w', 'T') * HostArraysPtr.H_w[local]
 				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'w') * c_w(HostArraysPtr.T[local]))
-				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n', 'T') * HostArraysPtr.H_n[local]
-				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'n') * c_n(HostArraysPtr.T[local]))
-				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g', 'T') * HostArraysPtr.H_g[local]
-				+ ro(HostArraysPtr.P_w[local], HostArraysPtr.T[local], 'g') * c_g(HostArraysPtr.T[local])))
+				+ HostArraysPtr.S_n[local] * (d_ro(HostArraysPtr.P_n[local], HostArraysPtr.T[local], 'n', 'T') * HostArraysPtr.H_n[local]
+				+ ro(HostArraysPtr.P_n[local], HostArraysPtr.T[local], 'n') * c_n(HostArraysPtr.T[local]))
+				+ HostArraysPtr.S_g[local] * (d_ro(HostArraysPtr.P_g[local], HostArraysPtr.T[local], 'g', 'T') * HostArraysPtr.H_g[local]
+				+ ro(HostArraysPtr.P_g[local], HostArraysPtr.T[local], 'g') * c_g(HostArraysPtr.T[local])))
 				+ (1. - HostArraysPtr.m[local]) * def.ro_r * c_r(HostArraysPtr.T[local]);
 
 			reverse_matrix(dF, n);
@@ -442,6 +442,8 @@ void Newton(int i, int j, int k)
 			HostArraysPtr.S_n[local] = HostArraysPtr.S_n[local] - correction[1];
 			HostArraysPtr.S_g[local] = HostArraysPtr.S_g[local] - correction[2];
 			HostArraysPtr.P_w[local] = HostArraysPtr.P_w[local] - correction[3];
+			HostArraysPtr.P_n[local] = HostArraysPtr.P_w[local] + assign_P_k_nw(assign_S_w_e(local));
+			HostArraysPtr.P_g[local] = HostArraysPtr.P_n[local] + assign_P_k_gn(assign_S_g_e(local));
 			HostArraysPtr.T[local] = HostArraysPtr.T[local] - correction[4];
 			assign_H(local);
 		}

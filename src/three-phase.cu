@@ -18,40 +18,37 @@ __device__ double device_assign_S_n_e(int local)
 	return (DevArraysPtr->S_n[local] - gpu_def->S_nr[media]) / (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
 }
 
+__device__ double device_assign_S_g_e(int local)
+{
+	return (DevArraysPtr->S_g[local] - gpu_def->S_gr[media]) / (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
+}
+
 // Вычисление капиллярных давлений
 // Функции кап. давлений и их производных для центральной части интервала
 __device__ double device_P_k_nw(double S)
 {
-	return 0;
-/*	double A = gpu_def->lambda[media];
+	double A = gpu_def->lambda[media];
 	return gpu_def->P_d_nw[media] * pow((pow(S, A / (1. - A)) - 1.), 1. / A);
-*/
 }
 
 __device__ double device_P_k_gn(double S)
 {
-	return 0;
-/*	double A = gpu_def->lambda[media];
+	double A = gpu_def->lambda[media];
 	return gpu_def->P_d_gn[media] * pow(pow((1. - S), A / (1. - A)) - 1., 1. / A);
-*/
 }
 
 __device__ double device_P_k_nw_S(double S)
 {
-	return 0;
-/*	double A = gpu_def->lambda[media];
+	double A = gpu_def->lambda[media];
 	return gpu_def->P_d_nw[media] * pow(pow(S, A / (1. - A)) - 1., 1. / A - 1.) * pow(S, (A / (1. - A) - 1.)) / (1. - A)
 		/ (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
-*/
 }
 
 __device__ double device_P_k_gn_S(double S)
 {
-	return 0;
-/*	double A = gpu_def->lambda[media];
+	double A = gpu_def->lambda[media];
 	return gpu_def->P_d_gn[media] * pow(pow(1. - S, A / (1. - A)) - 1., 1. / A - 1.) * pow(1. - S, A / (1. - A) - 1.) / (1. - A)
 		/ (1. - gpu_def->S_wr[media] - gpu_def->S_nr[media] - gpu_def->S_gr[media]);
-*/
 }
 
 // Функции вычисления капиллярных давлений и производных на всем интервале
@@ -59,8 +56,7 @@ __device__ double device_P_k_gn_S(double S)
 // Описание можно посмотреть в файле mathcad.
 __device__ double device_assign_P_k_nw(double S_w_e)
 {
-	return 0;
-/*	double Pk_nw = 0;
+	double Pk_nw = 0;
 
 	if (S_w_e <= S_w_range[0])
 	{
@@ -76,13 +72,11 @@ __device__ double device_assign_P_k_nw(double S_w_e)
 	}
 
 	return Pk_nw;
-*/
 }
 
 __device__ double device_assign_P_k_gn(double S_g_e)
 {
-	return 0;
-/*	double Pk_gn = 0;
+	double Pk_gn = 0;
 
 	if (S_g_e <= S_g_range[0])
 	{
@@ -98,14 +92,13 @@ __device__ double device_assign_P_k_gn(double S_g_e)
 	}
 	
 	return Pk_gn;
-*/
+
 }
 
 // Функции вычисления производных капиллярных давлений по насыщенностям
 __device__ double device_assign_P_k_nw_S(double S_w_e)
 {
-	return 0;
-/*	double PkSw = 0;
+	double PkSw = 0;
 
 	if (S_w_e <= S_w_range[0])
 	{
@@ -121,13 +114,11 @@ __device__ double device_assign_P_k_nw_S(double S_w_e)
 	}
 
 	return PkSw;
-*/
 }
 
 __device__ double device_assign_P_k_gn_S(double S_g_e)
 {
-	return 0;
-/*	double PkSn = 0;
+	double PkSn = 0;
 
 	if (S_g_e <= S_g_range[0])
 	{
@@ -143,7 +134,6 @@ __device__ double device_assign_P_k_gn_S(double S_g_e)
 	}
 
 	return PkSn;
-*/
 }
 
 // Функции вычисления относительных проницаемостей

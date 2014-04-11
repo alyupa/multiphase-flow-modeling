@@ -417,30 +417,30 @@ __global__ void Newton_method_kernel()
 			dF[4 + n] = d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'w', 'T') * DevArraysPtr->S_w[local];
 
 			dF[0 + n * 2] = 0.;
-			dF[1 + n * 2] = ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n');
+			dF[1 + n * 2] = ro(DevArraysPtr->P_n[local], DevArraysPtr->T[local], 'n');
 			dF[2 + n * 2] = 0.;
-			dF[3 + n * 2] = d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n', 'P') * DevArraysPtr->S_n[local];
-			dF[4 + n * 2] = d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n', 'T') * DevArraysPtr->S_n[local];
+			dF[3 + n * 2] = d_ro(DevArraysPtr->P_n[local], DevArraysPtr->T[local], 'n', 'P') * DevArraysPtr->S_n[local];
+			dF[4 + n * 2] = d_ro(DevArraysPtr->P_n[local], DevArraysPtr->T[local], 'n', 'T') * DevArraysPtr->S_n[local];
 
 			dF[0 + n * 3] = 0.;
 			dF[1 + n * 3] = 0.;
-			dF[2 + n * 3] = ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g');
-			dF[3 + n * 3] = d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g', 'P') * DevArraysPtr->S_g[local];
-			dF[4 + n * 3] = d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g', 'T') * DevArraysPtr->S_g[local];
+			dF[2 + n * 3] = ro(DevArraysPtr->P_g[local], DevArraysPtr->T[local], 'g');
+			dF[3 + n * 3] = d_ro(DevArraysPtr->P_g[local], DevArraysPtr->T[local], 'g', 'P') * DevArraysPtr->S_g[local];
+			dF[4 + n * 3] = d_ro(DevArraysPtr->P_g[local], DevArraysPtr->T[local], 'g', 'T') * DevArraysPtr->S_g[local];
 
 			dF[0 + n * 4] = DevArraysPtr->m[local] * (ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'w') * DevArraysPtr->H_w[local] - DevArraysPtr->P_w[local]);
-			dF[1 + n * 4] = DevArraysPtr->m[local] * (ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n') * DevArraysPtr->H_n[local] - DevArraysPtr->P_w[local]);
-			dF[2 + n * 4] = DevArraysPtr->m[local] * (ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g') * DevArraysPtr->H_g[local] - DevArraysPtr->P_w[local]);
+			dF[1 + n * 4] = DevArraysPtr->m[local] * (ro(DevArraysPtr->P_n[local], DevArraysPtr->T[local], 'n') * DevArraysPtr->H_n[local] - DevArraysPtr->P_n[local]);
+			dF[2 + n * 4] = DevArraysPtr->m[local] * (ro(DevArraysPtr->P_g[local], DevArraysPtr->T[local], 'g') * DevArraysPtr->H_g[local] - DevArraysPtr->P_g[local]);
 			dF[3 + n * 4] = DevArraysPtr->m[local] * (DevArraysPtr->S_w[local] * (d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'w', 'P') * DevArraysPtr->H_w[local] - 1.)
-				+ DevArraysPtr->S_n[local] * (d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n', 'P') * DevArraysPtr->H_n[local] - 1.)
-				+ DevArraysPtr->S_g[local] * (d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g', 'P') * DevArraysPtr->H_g[local] - 1.))
+				+ DevArraysPtr->S_n[local] * (d_ro(DevArraysPtr->P_n[local], DevArraysPtr->T[local], 'n', 'P') * DevArraysPtr->H_n[local] - 1.)
+				+ DevArraysPtr->S_g[local] * (d_ro(DevArraysPtr->P_g[local], DevArraysPtr->T[local], 'g', 'P') * DevArraysPtr->H_g[local] - 1.))
 				+ (1. - DevArraysPtr->m[local]) * (-1);
 			dF[4 + n * 4] = DevArraysPtr->m[local] * (DevArraysPtr->S_w[local] * (d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'w', 'T') * DevArraysPtr->H_w[local]
 				+ ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'w') * c_w(DevArraysPtr->T[local]))
-				+ DevArraysPtr->S_n[local] * (d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n', 'T') * DevArraysPtr->H_n[local]
-				+ ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'n') * c_n(DevArraysPtr->T[local]))
-				+ DevArraysPtr->S_g[local] * (d_ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g', 'T') * DevArraysPtr->H_g[local]
-				+ ro(DevArraysPtr->P_w[local], DevArraysPtr->T[local], 'g') * c_g(DevArraysPtr->T[local])))
+				+ DevArraysPtr->S_n[local] * (d_ro(DevArraysPtr->P_n[local], DevArraysPtr->T[local], 'n', 'T') * DevArraysPtr->H_n[local]
+				+ ro(DevArraysPtr->P_n[local], DevArraysPtr->T[local], 'n') * c_n(DevArraysPtr->T[local]))
+				+ DevArraysPtr->S_g[local] * (d_ro(DevArraysPtr->P_g[local], DevArraysPtr->T[local], 'g', 'T') * DevArraysPtr->H_g[local]
+				+ ro(DevArraysPtr->P_g[local], DevArraysPtr->T[local], 'g') * c_g(DevArraysPtr->T[local])))
 				+ (1. - DevArraysPtr->m[local]) * gpu_def->ro_r * c_r(DevArraysPtr->T[local]);
 
 			device_reverse_matrix(dF, n);
@@ -450,6 +450,8 @@ __global__ void Newton_method_kernel()
 			DevArraysPtr->S_n[local] = DevArraysPtr->S_n[local] - correction[1];
 			DevArraysPtr->S_g[local] = DevArraysPtr->S_g[local] - correction[2];
 			DevArraysPtr->P_w[local] = DevArraysPtr->P_w[local] - correction[3];
+			DevArraysPtr->P_n[local] = DevArraysPtr->P_w[local] + device_assign_P_k_nw(device_assign_S_w_e(local));
+			DevArraysPtr->P_g[local] = DevArraysPtr->P_n[local] + device_assign_P_k_gn(device_assign_S_g_e(local));
 			DevArraysPtr->T[local] = DevArraysPtr->T[local] - correction[4];
 			device_assign_H(local);
 		}

@@ -7,39 +7,41 @@ extern ptr_Arrays HostArraysPtr;
 // Номер среды
 const int media = 0;
 // Переломные точки насыщенностей при вычислении капиллярных давлений
-const double S_w_range[2] = {0.1, 0.99};
-const double S_g_range[2] = {0.005, 0.95};
+const double S_w_range[2] = {0.1, 0.9};
+const double S_g_range[2] = {0.1, 0.9};
 
 // Функции вычисления эффективных значений насыщенностей
-static inline double assign_S_w_e(int local)
+double assign_S_w_e(int local)
 {
 	return (HostArraysPtr.S_w[local] - def.S_wr[media]) / (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]);
 }
 
-static inline double assign_S_n_e(int local)
+double assign_S_n_e(int local)
 {
 	return (HostArraysPtr.S_n[local] - def.S_nr[media]) / (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]);
+}
+
+double assign_S_g_e(int local)
+{
+	return (HostArraysPtr.S_g[local] - def.S_gr[media]) / (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]);
 }
 
 // Вычисление капиллярных давлений
 // Функции кап. давлений и их производных для центральной части интервала
 static inline double P_k_nw(double S)
 {
-	return 0;
 	double A = def.lambda[media];
 	return def.P_d_nw[media] * pow((pow(S, A / (1. - A)) - 1.), 1. / A);
 }
 
 static inline double P_k_gn(double S)
 {
-	return 0;
 	double A = def.lambda[media];
 	return def.P_d_gn[media] * pow(pow((1. - S), A / (1. - A)) - 1., 1. / A);
 }
 
 static inline double P_k_nw_S(double S)
 {
-	return 0;
 	double A = def.lambda[media];
 	return def.P_d_nw[media] * pow(pow(S, A / (1. - A)) - 1., 1. / A - 1.) * pow(S, (A / (1. - A) - 1.)) / (1. - A)
 		/ (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]);
@@ -47,19 +49,16 @@ static inline double P_k_nw_S(double S)
 
 static inline double P_k_gn_S(double S)
 {
-	return 0;
 	double A = def.lambda[media];
 	return def.P_d_gn[media] * pow(pow(1. - S, A / (1. - A)) - 1., 1. / A - 1.) * pow(1. - S, A / (1. - A) - 1.) / (1. - A)
-		/ (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]);
+		/ (1. - def.S_wr[media] - def.S_nr[media] - def.S_gr[media]) * (-1.0);
 }
 
 // Функции вычисления капиллярных давлений и производных на всем интервале
 // По краям интервала [0, 1] функции капиллярных давлений гладко заменяем линейными, производные меняются соответственно.
 // Описание можно посмотреть в файле mathcad.
-static inline double assign_P_k_nw(double S_w_e)
+double assign_P_k_nw(double S_w_e)
 {
-	return 0;
-
 	double Pk_nw = 0;
 
 	if (S_w_e <= S_w_range[0])
@@ -78,10 +77,8 @@ static inline double assign_P_k_nw(double S_w_e)
 	return Pk_nw;
 }
 
-static inline double assign_P_k_gn(double S_g_e)
+double assign_P_k_gn(double S_g_e)
 {
-	return 0;
-
 	double Pk_gn = 0;
 
 	if (S_g_e <= S_g_range[0])
@@ -103,8 +100,6 @@ static inline double assign_P_k_gn(double S_g_e)
 // Функции вычисления производных капиллярных давлений по насыщенностям
 static inline double assign_P_k_nw_S(double S_w_e)
 {
-	return 0;
-
 	double PkSw = 0;
 
 	if (S_w_e <= S_w_range[0])
@@ -125,17 +120,15 @@ static inline double assign_P_k_nw_S(double S_w_e)
 
 static inline double assign_P_k_gn_S(double S_g_e)
 {
-	return 0;
-
 	double PkSn = 0;
 
 	if (S_g_e <= S_g_range[0])
 	{
-		PkSn = (-1) * P_k_gn_S(S_g_range[0]);
+		PkSn = P_k_gn_S(S_g_range[0]);
 	}
 	else if (S_g_e >= S_g_range[1])
 	{
-		PkSn = (-1) * P_k_gn_S(S_g_range[1]);
+		PkSn = P_k_gn_S(S_g_range[1]);
 	}
 	else
 	{
