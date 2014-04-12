@@ -4,8 +4,8 @@
 // Номер среды
 __constant__ int media = 0;
 // Переломные точки насыщенностей при вычислении капиллярных давлений
-__constant__ double S_w_range[2] = {0.1, 0.99};
-__constant__ double S_g_range[2] = {0.005, 0.95};
+__constant__ double S_w_range[2] = {0.1, 0.9};
+__constant__ double S_g_range[2] = {0.1, 0.9};
 
 // Функции вычисления эффективных значений насыщенностей
 __device__ double device_assign_S_w_e(int local)
