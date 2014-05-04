@@ -243,6 +243,19 @@ void exchange(double* HostArray)
 	exchange_direct(HostArray, 'z');
 }
 
+void exchange_u()
+{
+	exchange_direct(HostArraysPtr.ux_w, 'x');
+	exchange_direct(HostArraysPtr.uy_w, 'y');
+	exchange_direct(HostArraysPtr.uz_w, 'z');
+	exchange_direct(HostArraysPtr.ux_n, 'x');
+	exchange_direct(HostArraysPtr.uy_n, 'y');
+	exchange_direct(HostArraysPtr.uz_n, 'z');
+	exchange_direct(HostArraysPtr.ux_g, 'x');
+	exchange_direct(HostArraysPtr.uy_g, 'y');
+	exchange_direct(HostArraysPtr.uz_g, 'z');
+}
+
 // Обмен граничными значениями
 void exchange_basic_vars()
 {
@@ -252,6 +265,7 @@ void exchange_basic_vars()
 #ifdef ENERGY
 	exchange(HostArraysPtr.T);
 #endif
+	exchange_u();
 }
 
 void communication_initialization(int argc, char* argv[])
