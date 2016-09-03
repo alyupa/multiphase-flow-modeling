@@ -251,11 +251,11 @@ def get_eps(method1, method2, time):
     Sw_tmp2[:] = Data_tmp[NX:]
     datafile.close()
     
-    Pw_diff = np.linalg.norm(Pw_tmp1 - Pw_tmp2)
-    Sw_diff = np.linalg.norm(Sw_tmp1 - Sw_tmp2)
+    Pw_diff = np.linalg.norm((Pw_tmp1 - Pw_tmp2) / Pw_tmp1)
+    Sw_diff = np.linalg.norm((Sw_tmp1 - Sw_tmp2) / Sw_tmp1)
 
-    Pw_eps = Pw_diff / np.mean(Pw_tmp1) / NX
-    Sw_eps = Sw_diff / np.mean(Sw_tmp1) / NX
+    Pw_eps = Pw_diff / NX
+    Sw_eps = Sw_diff / NX
     
     print 'Pressure error: ' + str(Pw_eps * 100) + '%'
     print 'Saturation error: ' + str(Sw_eps * 100) + '%'
@@ -294,7 +294,7 @@ def solve_system(method, timesteps, print_t, save_plots_t, save_data_t, dt):
         if (t % save_data_t == 0):
             save_data(method, t * dt)
     
-def hello():
+def solve_two_phase_problem():
     if not os.path.exists(PLOTS_DIR):
         os.makedirs(PLOTS_DIR)
     if not os.path.exists(DATA_DIR):

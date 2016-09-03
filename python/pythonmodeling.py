@@ -8,4 +8,4 @@ __date__ = "$Oct 17, 2015 12:59:54 PM$"
 from two_phase_1d import *
 
 if __name__ == "__main__":
-    hello()
+    solve_two_phase_problem()
