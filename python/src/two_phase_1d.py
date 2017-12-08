@@ -18,7 +18,7 @@ LX = 5.0
 LY = LZ = 1.0
 NX = 100
 P_ATM = 1.0
-P0 = 300 * P_ATM
+P0 = P_ATM
 SW0 = 0.35
 DH = LX / NX
 TAU = 2.5e-2
@@ -36,10 +36,17 @@ MU_N = 1.0e-7
 SWR = SNR = 0.05
 LAMBDA_W = K / MU_W
 LAMBDA_N = K / MU_N
+ALPHA = 10.0
 
+P = np.zeros(NX, dtype=np.float64)
+P_new = np.zeros(NX, dtype=np.float64)
+P_old = np.zeros(NX, dtype=np.float64)
 Pw = np.zeros(NX, dtype=np.float64)
 Pw_new = np.zeros(NX, dtype=np.float64)
 Pw_old = np.zeros(NX, dtype=np.float64)
+Pn = np.zeros(NX, dtype=np.float64)
+Pc = np.zeros(NX, dtype=np.float64)
+Pc_old = np.zeros(NX, dtype=np.float64)
 Sw = np.zeros(NX, dtype=np.float64)
 Sw_old = np.zeros(NX, dtype=np.float64)
 Sw_tmp = np.zeros(NX, dtype=np.float64)
@@ -55,14 +62,20 @@ Cn = np.zeros(NX, dtype=np.float64)
 
 def init_p_s():
     for i in range(NX):
-        Pw[i] = P0 + (1.1 * P0 - P0) * i / (NX - 1)
-    Pw_new[:] = Pw
-    Pw_old[:] = Pw
+        P[i] = P_ATM + 0.3 * P_ATM * (1.0 - i / (NX - 1))
+    P_new[:] = P
+    P_old[:] = P
     Sw[:] = SW0
     Sw_old[:] = Sw
     Sn[:] = 1.0 - Sw
     Qn[:] = 0.0
     Qw[:] = 0.0
+    for i in range(NX):
+        Pc[i] = pc(Sw[i])
+        Pw[i] = P[i] - Pc[i] * 0.5
+        Pn[i] = P[i] + Pc[i] * 0.5
+    Pw_new[:] = Pw
+    Pw_old[:] = Pw
 
 def kw(sw):
     k = 0.0
@@ -88,6 +101,45 @@ def kn(sw):
         2 * (NK - 1) / NK)
     return k
 
+
+def pcnw(sw):
+    p = 1.0 / ALPHA * pow(pow(sw, NK / (1.0 - NK)) - 1.0,1.0 / NK)
+    return p
+
+def pcnws(sw):
+    ps = 1.0 / ALPHA * 1.0 / (1.0 - NK) * pow(pow(sw, NK / (1.0 - NK)) - 1.0,
+    (1.0 / NK - 1.0) * pow(sw, (NK / (1.0 - NK) - 1.0)) / (1.0 - SWR - SNR))
+    return ps
+
+def pc(sw):
+    sw1 = 0.1
+    sw2 = 0.9
+    p = 0.0
+    sw = (sw - SWR) / (1.0 - SWR - SNR)
+    if (sw <= sw1):
+        p = pcs(sw1)* (sw - sw1) + pcnw(sw1)
+    elif (sw2 < sw and sw < 1.0):
+        p = pcs(sw2) * (sw - sw2) + pcnw(sw2)
+    elif (sw >= 1.0):
+        p = 0.0
+    else:
+        p = pcnw(sw)
+    return p
+
+def pcs(sw):
+    sw1 = 0.1
+    sw2 = 0.9
+    ps = 0
+    sw = (sw - SWR) / (1.0 - SWR - SNR)
+    if (sw <= sw1):
+        ps = pcnws(sw1)
+    elif (sw2 <= sw):
+        ps = pcnws(sw2)
+    else:
+        ps = pcnws(sw)
+    return ps
+
+
 def set_lambda():
     for i in range(NX - 1):
         if (Pw[i + 1] - Pw[i] - Rw[i] * G * DH <= 0):
@@ -101,7 +153,7 @@ def set_lambda():
         
 def set_rho():
         Rw[:] = RO_W * (1.0 + BETA_W * (Pw - P_ATM))
-        Rn[:] = RO_N * (1.0 + BETA_N * (Pw - P_ATM))
+        Rn[:] = RO_N * (1.0 + BETA_N * (Pn - P_ATM))
         
 def set_c():
         Cw[:] = RO_W * BETA_W / Rw
@@ -138,6 +190,9 @@ def explicit3_set_s(dt):
     Sw_old[:] = Sw_tmp
 
 def update_p():
+    global P
+    global P_new
+    P, P_new = P_new, P
     global Pw
     global Pw_new
     Pw, Pw_new = Pw_new, Pw
@@ -148,6 +203,16 @@ def explicit3_update_p():
     global Pw_new
     Pw, Pw_old = Pw_old, Pw
     Pw, Pw_new = Pw_new, Pw
+
+def set_pc():
+    Pc_old[:] = Pc
+    for i in range(NX):
+        Pc[i] = pc(Sw[i])
+
+def set_pw_pn():
+    for i in range(0, NX):   
+        Pw[i] = P[i] - Pc[i] * 0.5
+        Pn[i] = P[i] + Pc[i] * 0.5
 
 def impes_set_p(dt):
     A = sp.lil_matrix((NX, NX), dtype=np.float64)
@@ -162,15 +227,42 @@ def impes_set_p(dt):
         Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
         ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
         Lw[i - 1] * 0.5 * (Rw[i - 1] + Rw[i])) / Rw[i])) \
-        - (1.0 / dt) * Pw[i] * PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) - \
-        (Qn[i] / Rn[i] - Qw[i] / Rw[i])
+        - (1.0 / dt) * P[i] * PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) - \
+        (Qn[i] / Rn[i] + Qw[i] / Rw[i]) - \
+        0.5 * ((Ln[i] * (Pc[i + 1] - Pc[i]) - \
+        Ln[i - 1] * (Pc[i] - Pc[i - 1])) / Rn[i] + \
+        (Lw[i] * (Pc[i + 1] - Pc[i]) - \
+        Lw[i - 1] * (Pc[i] - Pc[i - 1])) / Rw[i]) / (DH * DH) + \
+        (0.5 / dt) * PHI * (Sn[i] * Cn[i] - Sw[i] * Cw[i]) * (Pc[i] - Pc_old[i])
     A[0, 0] = 1.0
     A[NX - 1, NX - 1] = 1.0
-    b[0] = P0 * 1.1
-    b[NX - 1] = P0
+    b[0] = 1.3 * P_ATM
+    b[NX - 1] = P_ATM
 
     SpA = sp.csr_matrix(A)
-    #print SpA.todense()
+    P_new[:] = la.spsolve(SpA, b)
+
+def impes_set_p_old(dt):
+    A = sp.lil_matrix((NX, NX), dtype=np.float64)
+    b = np.zeros(NX)
+    for i in range(1, NX - 1):
+        A[i, i - 1] = (Ln[i - 1] / Rn[i] + Lw[i - 1] / Rw[i]) / (DH * DH)
+        A[i, i] = (-1.0) * ((Ln[i] + Ln[i - 1]) / Rn[i] + \
+        (Lw[i] + Lw[i - 1]) / Rw[i]) / (DH * DH) - (1.0 / dt) * PHI * \
+        (Sn[i] * Cn[i] + Sw[i] * Cw[i])
+        A[i, i + 1] = (Ln[i] / Rn[i] + Lw[i] / Rw[i]) / (DH * DH)
+        b[i] = (G / DH) * ((Ln[i] * 0.5 * (Rn[i + 1] + Rn[i]) - \
+        Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
+        ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
+        Lw[i - 1] * 0.5 * (Rw[i - 1] + Rw[i])) / Rw[i])) \
+        - (1.0 / dt) * Pw[i] * PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) - \
+        (Qn[i] / Rn[i] + Qw[i] / Rw[i])
+    A[0, 0] = 1.0
+    A[NX - 1, NX - 1] = 1.0
+    b[0] = 1.3 * P_ATM
+    b[NX - 1] = P_ATM
+
+    SpA = sp.csr_matrix(A)
     Pw_new[:] = la.spsolve(SpA, b)
 
 def explicit2_set_p(dt):
@@ -182,7 +274,7 @@ def explicit2_set_p(dt):
         Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
         ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
         Lw[i - 1] * 0.5 * (Rw[i - 1] + Rw[i])) / Rw[i])) + \
-        (Qn[i] / Rn[i] - Qw[i] / Rw[i]) + \
+        (Qn[i] / Rn[i] + Qw[i] / Rw[i]) + \
         ((Ln[i] * (Pw[i + 1] - Pw[i]) - Ln[i - 1] * (Pw[i] - Pw[i - 1])) / Rn[i] + \
         (Lw[i] * (Pw[i + 1] - Pw[i]) - Lw[i - 1] * (Pw[i] - Pw[i - 1])) / Rw[i]) / \
         (DH * DH))
@@ -197,7 +289,7 @@ def explicit3_set_p(dt):
         Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
         ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
         Lw[i - 1] * 0.5 * (Rw[i - 1] + Rw[i])) / Rw[i])) + \
-        (Qn[i] / Rn[i] - Qw[i] / Rw[i]) + \
+        (Qn[i] / Rn[i] + Qw[i] / Rw[i]) + \
         ((Ln[i] * (Pw[i + 1] - Pw[i]) - Ln[i - 1] * (Pw[i] - Pw[i - 1])) / Rn[i] + \
         (Lw[i] * (Pw[i + 1] - Pw[i]) - Lw[i - 1] * (Pw[i] - Pw[i - 1])) / Rw[i]) / \
         (DH * DH) + (PHI / dt) * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) * (Pw[i] + \
@@ -218,8 +310,10 @@ def print_plots(test_name, time):
     ax2 = fig.add_subplot(212)
     ax2.set_ylabel("P, bar")
     ax2.set_title("Pressure")
-    line, = ax2.plot(h, Pw, color='green', lw=2)
-    ax2.set_ylim([P0 * 0.85, P0 * 1.15])
+    line1, = ax2.plot(h, Pw, color='green', lw=2)
+    line2, = ax2.plot(h, Pn, color='yellow', lw=2)
+    line3, = ax2.plot(h, P, color='brown', lw=2)
+    ax2.set_ylim([P_ATM * 0.85, P_ATM * 1.5])
 
     plt.subplots_adjust(wspace=0.2,hspace=.4)
     #plt.show()
@@ -238,13 +332,13 @@ def get_eps(method1, method2, time):
     Pw_tmp2 = np.zeros(NX)
     Sw_tmp1 = np.zeros(NX)
     Sw_tmp2 = np.zeros(NX)
-    
+
     datafile = open(DATA_DIR + '/' + method1 + '_' + str(time) +'s.out', 'r')
     Data_tmp = np.loadtxt(datafile, dtype=np.float64)
     Pw_tmp1[:] = Data_tmp[:NX]
     Sw_tmp1[:] = Data_tmp[NX:]
     datafile.close()
-    
+
     datafile = open(DATA_DIR + '/' + method2 + '_' + str(time) +'s.out', 'r')
     Data_tmp = np.loadtxt(datafile, dtype=np.float64)
     Pw_tmp2[:] = Data_tmp[:NX]
@@ -261,11 +355,13 @@ def get_eps(method1, method2, time):
     print 'Saturation error: ' + str(Sw_eps * 100) + '%'
     
 def time_step(method, dt):
+    set_pc()
     set_rho()
     set_c()
     set_lambda()
     if (method == 'impes'):
         impes_set_p(dt)
+        set_pw_pn()
         set_s(dt)
         update_p()
     elif (method == 'explicit2'):
@@ -276,6 +372,9 @@ def time_step(method, dt):
         explicit3_set_p(dt)
         explicit3_set_s(dt)
         explicit3_update_p()
+    else:
+        print('error: wrong method')
+        return
 
 def solve_system(method, timesteps, print_t, save_plots_t, save_data_t, dt):
     init_p_s()
@@ -284,6 +383,9 @@ def solve_system(method, timesteps, print_t, save_plots_t, save_data_t, dt):
         time_step(method, dt)
     elif (method == 'explicit3'):
         time_step('explicit2', dt)
+    else:
+        print('error: wrong method')
+        return
     # other steps
     for t in range(2, timesteps + 1):
         time_step(method, dt)
@@ -293,17 +395,84 @@ def solve_system(method, timesteps, print_t, save_plots_t, save_data_t, dt):
             print_plots(method, t * dt)
         if (t % save_data_t == 0):
             save_data(method, t * dt)
+
+def print_tec(method, time):
+    Pw_tmp1 = np.zeros(NX)
+    Sw_tmp1 = np.zeros(NX)
+
+    datafile = open(DATA_DIR + '/' + method + '_' + str(time) +'s.out', 'r')
+    Data_tmp = np.loadtxt(datafile, dtype=np.float64)
+    Pw_tmp1[:] = Data_tmp[:NX]
+    Sw_tmp1[:] = Data_tmp[NX:]
+    datafile.close()
     
+    print '# x, m   P, bar   Sw'
+    x = 0
+    for i in range(0, NX):
+        print str(x) + ' ' + str(Pw_tmp1[i]) + ' ' +  str(Sw_tmp1[i])
+        x += LX / NX
+        
+def print_perm():
+    print '# Sw   k_w   k_n'
+    Kw = np.zeros(NX, dtype=np.float64)
+    Kn = np.zeros(NX, dtype=np.float64)
+    x = 0.0
+    for i in range(0, NX):
+        print str(x) + ' ' + str(kw(x)) + ' ' +  str(kn(x))
+        x += 1.0 / NX
+        Kw[i] = kw(x)
+        Kn[i] = kn(x)
+        
+    h = np.linspace(0, 1, NX)
+    fig = plt.figure()
+    fig.canvas.set_window_title('k()')
+    ax1 = fig.add_subplot(211)
+    ax1.set_ylabel("k")
+    ax1.set_title("kw, kn")
+    line1, = ax1.plot(h, Kw, color='blue', lw=2)
+    line2, = ax1.plot(h, Kn, color='red', lw=2)
+    ax1.set_ylim([0.0, 1.0])
+    plt.subplots_adjust(wspace=0.2,hspace=.4)
+    #plt.show()
+    saveto = PLOTS_DIR + '/' + 'k.png'
+    fig.savefig(saveto, format='png')
+    plt.close(fig)
+    
+def print_pc():
+    PC = np.zeros(NX, dtype=np.float64)
+    x = 0.0
+    for i in range(0, NX):
+        x += 1.0 / NX
+        PC[i] = pc(x)
+        
+    h = np.linspace(0, 1, NX)
+    fig = plt.figure()
+    fig.canvas.set_window_title('pc()')
+    ax1 = fig.add_subplot(211)
+    ax1.set_ylabel("pc")
+    ax1.set_title("pc")
+    line, = ax1.plot(h, PC, color='green', lw=2)
+    ax1.set_ylim([0.0, 1.0])
+    plt.subplots_adjust(wspace=0.2,hspace=.4)
+    #plt.show()
+    saveto = PLOTS_DIR + '/' + 'pc.png'
+    fig.savefig(saveto, format='png')
+    plt.close(fig)
+
 def solve_two_phase_problem():
     if not os.path.exists(PLOTS_DIR):
         os.makedirs(PLOTS_DIR)
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
     
-    #solve_system('impes', 1000000, 1000, 50000, 50000, 1.0e-3)
+#    print_perm()
+    print_pc()
+    #print_tec('impes', 10.0)
+    solve_system('impes', 10000000, 1000, 1000, 1000, 1.0e-3)
     #solve_system('explicit2', 10000, 1000, 100000, 10000, 1.0e-5)
     #solve_system('explicit3', 100000, 1000, 100000, 10000, 1.0e-3)
     #get_eps('impes', 'explicit2', 0.1)
     #get_eps('explicit3', 'explicit2', 0.1)
-    get_eps('explicit3', 'impes', 100.0)
+    #get_eps('explicit3', 'impes', 100.0)
+
     

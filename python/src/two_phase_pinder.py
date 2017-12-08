@@ -17,6 +17,9 @@ DATA_DIR = 'data'
 LX = 67.0
 LY = LZ = 1.0
 NX = 100
+P_ATM = 1000000.0
+P0 = P_ATM * 1.3
+#P0 = P_ATM + RO_W * G * 31.5
 SW0 = 0.985
 DH = LX / NX
 TAU = 2.5e-2
@@ -27,9 +30,6 @@ K = 5.0e-7
 NK = 10.0
 RO_W=0.9982
 RO_G = 0.000129
-P_ATM = 1000000.0
-#P0 = P_ATM * 1.3
-P0 = P_ATM + RO_W * G * 31.5
 BETA_W = 4.4e-8
 BETA_G = 1.0e-5
 MU_W = 0.01
@@ -38,13 +38,14 @@ SWR = 0.12
 SGR = 0.0
 LAMBDA_W = K / MU_W
 LAMBDA_G = K / MU_G
-ALPHA = 4.0e-5
+ALPHA = 1.0e-5
 
 P = np.zeros(NX, dtype=np.float64)
 P_new = np.zeros(NX, dtype=np.float64)
 P_old = np.zeros(NX, dtype=np.float64)
 Pw = np.zeros(NX, dtype=np.float64)
 Pw_new = np.zeros(NX, dtype=np.float64)
+Pw_old = np.zeros(NX, dtype=np.float64)
 Pg = np.zeros(NX, dtype=np.float64)
 Pc = np.zeros(NX, dtype=np.float64)
 Pc_old = np.zeros(NX, dtype=np.float64)
@@ -63,7 +64,9 @@ Cg = np.zeros(NX, dtype=np.float64)
 
 def init_p_s():
     for i in range(NX):
-        Pw[i] = P_ATM + (P0 - P_ATM) * (1.0 - i / (NX - 1))
+        P[i] = P_ATM + 0.3 * P_ATM * (1.0 - i / (NX - 1))
+    P_new[:] = P
+    P_old[:] = P
     Sw[:] = SW0
     Sw_old[:] = Sw
     Sg[:] = 1.0 - Sw
@@ -71,10 +74,10 @@ def init_p_s():
     Qw[:] = 0.0
     for i in range(NX):
         Pc[i] = pc(Sw[i])
-        Pg[i] = Pw[i] + Pc[i]
-    P[:] = (Pw + Pg) * 0.5
-    P_new[:] = P
-    P_old[:] = P
+        Pw[i] = P[i] - Pc[i] * 0.5
+        Pg[i] = P[i] + Pc[i] * 0.5
+    Pw_new[:] = Pw
+    Pw_old[:] = Pw
 
 def kw(sw):
     k = 0.0
@@ -110,8 +113,8 @@ def pcgws(sw):
     return ps
 
 def pc(sw):
-    sw1 = 0.01
-    sw2 = 0.99
+    sw1 = 0.1
+    sw2 = 0.9
     p = 0.0
     sw = (sw - SWR) / (1.0 - SWR - SGR)
     if (sw <= sw1):
@@ -125,8 +128,8 @@ def pc(sw):
     return p
 
 def pcs(sw):
-    sw1 = 0.01
-    sw2 = 0.99
+    sw1 = 0.1
+    sw2 = 0.9
     ps = 0
     sw = (sw - SWR) / (1.0 - SWR - SGR)
     if (sw <= sw1):
@@ -173,21 +176,19 @@ def set_s(dt):
         (G / DH) * (0.5 * (Rw[i + 1] + Rw[i]) * Lw[i] - \
         0.5 * (Rw[i] + Rw[i - 1]) * Lw[i - 1]) + Qw[i]) - \
         Sw[i] * Cw[i] * (Pw_new[i] - Pw[i])
+    Sw[0] = Sw[1]
+    Sw[NX - 1] = Sw[NX - 2]
     Sg[:] = 1.0 - Sw
     
 def set_pc():
     Pc_old[:] = Pc
     for i in range(NX):
         Pc[i] = pc(Sw[i])
-        
+
 def set_pw_pg():
-    for i in range(1, NX - 1):   
+    for i in range(0, NX):   
         Pw[i] = P[i] - Pc[i] * 0.5
         Pg[i] = P[i] + Pc[i] * 0.5
-    Pw[0] = P0
-    Pg[0] = P[1] + Rg[1] * G * DH
-    Pw[NX - 1] = P[NX - 2] - Rw[NX - 2] * G * DH
-    Pg[NX - 1] = P_ATM
 
 def explicit3_set_s(dt):
     Sw_tmp[:] = Sw
@@ -208,10 +209,10 @@ def explicit3_set_s(dt):
     Sw_old[:] = Sw_tmp
 
 def update_p():
-    global P
-    global P_new
+    global P, P_new, Pw, Pw_new
     P, P_new = P_new, P
-    
+    Pw, Pw_new = Pw_new, Pw
+
 def explicit3_update_p():
     global P
     global P_old
@@ -241,15 +242,11 @@ def impes_set_p(dt):
         (0.5 / dt) * PHI * (Sg[i] * Cg[i] - Sw[i] * Cw[i]) * (Pc[i] - Pc_old[i])
     A[0, 0] = 1.0
     A[NX - 1, NX - 1] = 1.0
-    b[0] = (Pw[0] + Pg[0]) * 0.5
-    b[NX - 1] = (Pw[NX - 1] + Pg[NX - 1]) * 0.5
+    b[0] = 1.3 * P_ATM
+    b[NX - 1] = P_ATM
 
     SpA = sp.csr_matrix(A)
     P_new[:] = la.spsolve(SpA, b)
-    
-    Pw_new[:] = P_new - 0.5 * Pc
-    Pw_new[0] = P0
-    Pw_new[NX - 1] = P_new[NX - 2] - Rw[NX - 2] * G * DH
 
 def explicit2_set_p(dt):
     Pw_new[0] = P0
@@ -294,10 +291,12 @@ def print_plots(test_name, time):
     ax1.set_ylim([0.0, 1.0])
     
     ax2 = fig.add_subplot(212)
-    ax2.set_ylabel("P_avg, bar")
+    ax2.set_ylabel("P, bar")
     ax2.set_title("Pressure")
-    line, = ax2.plot(h, P, color='green', lw=2)
-    ax2.set_ylim([P_ATM, P0])
+    line1, = ax2.plot(h, Pw, color='green', lw=2)
+    line2, = ax2.plot(h, Pg, color='yellow', lw=2)
+    line3, = ax2.plot(h, P, color='brown', lw=2)
+    ax2.set_ylim([P_ATM * 0.85, P_ATM * 1.5])
 
     plt.subplots_adjust(wspace=0.2,hspace=.4)
     #plt.show()
@@ -337,15 +336,15 @@ def get_eps(method1, method2, time):
     
     print 'Pressure error: ' + str(P_eps * 100) + '%'
     print 'Saturation error: ' + str(Sw_eps * 100) + '%'
-    
+
 def time_step(method, dt):
     set_pc()
-    set_pw_pg()
     set_rho()
     set_c()
     set_lambda()
     if (method == 'impes'):
         impes_set_p(dt)
+        set_pw_pg()
         set_s(dt)
         update_p()
     elif (method == 'explicit2'):
@@ -380,12 +379,34 @@ def solve_system(method, timesteps, print_t, save_plots_t, save_data_t, dt):
         if (t % save_data_t == 0):
             save_data(method, t * dt)
 
+def print_pc():
+    PC = np.zeros(NX, dtype=np.float64)
+    x = 0.0
+    for i in range(0, NX):
+        x += 1.0 / NX
+        PC[i] = pc(x)
+        
+    h = np.linspace(0, 1, NX)
+    fig = plt.figure()
+    fig.canvas.set_window_title('pc()')
+    ax1 = fig.add_subplot(211)
+    ax1.set_ylabel("pc")
+    ax1.set_title("pc")
+    line, = ax1.plot(h, PC, color='green', lw=2)
+    ax1.set_ylim([0.0, 0.2 * P_ATM])
+    plt.subplots_adjust(wspace=0.2,hspace=.4)
+    #plt.show()
+    saveto = PLOTS_DIR + '/' + 'pc.png'
+    fig.savefig(saveto, format='png')
+    plt.close(fig)
+
 def solve_two_phase_pinder_test():
     if not os.path.exists(PLOTS_DIR):
         os.makedirs(PLOTS_DIR)
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
-    
-    solve_system('impes', 10000000, 10000, 10000, 10000, 1.0e-3)
+        
+    print_pc()
+    solve_system('impes', 10000000, 1000, 1000, 1000, 1.0e-3)
 
     

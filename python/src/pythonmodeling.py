@@ -4,8 +4,14 @@
 
 __author__ = "Anastasia Lyupa"
 __date__ = "$Oct 17, 2015 12:59:54 PM$"
-
+'''
 from two_phase_1d import *
 
 if __name__ == "__main__":
     solve_two_phase_problem()
+'''
+
+from two_phase_pinder import *
+
+if __name__ == "__main__":
+    solve_two_phase_pinder_test()
