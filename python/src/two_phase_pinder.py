@@ -18,8 +18,6 @@ LX = 67.0
 LY = LZ = 1.0
 NX = 100
 P_ATM = 1000000.0
-P0 = P_ATM * 1.3
-#P0 = P_ATM + RO_W * G * 31.5
 SW0 = 0.985
 DH = LX / NX
 TAU = 2.5e-2
@@ -31,14 +29,15 @@ NK = 10.0
 RO_W=0.9982
 RO_G = 0.000129
 BETA_W = 4.4e-8
-BETA_G = 1.0e-5
+BETA_G = 1.0e-8
 MU_W = 0.01
 MU_G = 0.0015
-SWR = 0.12
+SWR = 0.0
 SGR = 0.0
 LAMBDA_W = K / MU_W
 LAMBDA_G = K / MU_G
 ALPHA = 1.0e-5
+P0 = P_ATM + RO_W * G * 31.5
 
 P = np.zeros(NX, dtype=np.float64)
 P_new = np.zeros(NX, dtype=np.float64)
@@ -47,6 +46,8 @@ Pw = np.zeros(NX, dtype=np.float64)
 Pw_new = np.zeros(NX, dtype=np.float64)
 Pw_old = np.zeros(NX, dtype=np.float64)
 Pg = np.zeros(NX, dtype=np.float64)
+Pg_new = np.zeros(NX, dtype=np.float64)
+Pg_old = np.zeros(NX, dtype=np.float64)
 Pc = np.zeros(NX, dtype=np.float64)
 Pc_old = np.zeros(NX, dtype=np.float64)
 Sw = np.zeros(NX, dtype=np.float64)
@@ -64,7 +65,7 @@ Cg = np.zeros(NX, dtype=np.float64)
 
 def init_p_s():
     for i in range(NX):
-        P[i] = P_ATM + 0.3 * P_ATM * (1.0 - i / (NX - 1))
+        P[i] = P_ATM + RO_W * G * LX * (1.0 - i / (NX - 1))
     P_new[:] = P
     P_old[:] = P
     Sw[:] = SW0
@@ -78,6 +79,8 @@ def init_p_s():
         Pg[i] = P[i] + Pc[i] * 0.5
     Pw_new[:] = Pw
     Pw_old[:] = Pw
+    Pg_new[:] = Pg
+    Pg_old[:] = Pg
 
 def kw(sw):
     k = 0.0
@@ -113,8 +116,8 @@ def pcgws(sw):
     return ps
 
 def pc(sw):
-    sw1 = 0.1
-    sw2 = 0.9
+    sw1 = 0.05
+    sw2 = 0.95
     p = 0.0
     sw = (sw - SWR) / (1.0 - SWR - SGR)
     if (sw <= sw1):
@@ -128,8 +131,8 @@ def pc(sw):
     return p
 
 def pcs(sw):
-    sw1 = 0.1
-    sw2 = 0.9
+    sw1 = 0.05
+    sw2 = 0.95
     ps = 0
     sw = (sw - SWR) / (1.0 - SWR - SGR)
     if (sw <= sw1):
@@ -151,7 +154,7 @@ def set_lambda():
             Lg[i] = 0.5 * (Rg[i + 1] + Rg[i]) * LAMBDA_G * kg(Sw[i])
         else:
             Lg[i] = 0.5 * (Rg[i + 1] + Rg[i]) * LAMBDA_G * kg(Sw[i + 1])
-        
+
 def set_rho():
     Rw[:] = RO_W * (1.0 + BETA_W * (Pw - P_ATM))
     Rg[:] = RO_G * (1.0 + BETA_G * (Pg - P_ATM))
@@ -179,16 +182,20 @@ def set_s(dt):
     Sw[0] = Sw[1]
     Sw[NX - 1] = Sw[NX - 2]
     Sg[:] = 1.0 - Sw
-    
+
 def set_pc():
     Pc_old[:] = Pc
-    for i in range(NX):
+    for i in range(0, NX):
         Pc[i] = pc(Sw[i])
 
 def set_pw_pg():
     for i in range(0, NX):   
         Pw[i] = P[i] - Pc[i] * 0.5
         Pg[i] = P[i] + Pc[i] * 0.5
+    Pw[0] = 1.3 * P_ATM
+    Pw[NX - 1] = Pw[NX - 2] - Rw[NX - 2] * G * DH
+    Pg[0] = Pg[1] + Rg[1] * G * DH
+    Pg[NX - 1] = P_ATM
 
 def explicit3_set_s(dt):
     Sw_tmp[:] = Sw
@@ -209,18 +216,22 @@ def explicit3_set_s(dt):
     Sw_old[:] = Sw_tmp
 
 def update_p():
-    global P, P_new, Pw, Pw_new
+    global P, P_new, Pw, Pw_new, Pg, Pg_new
     P, P_new = P_new, P
     Pw, Pw_new = Pw_new, Pw
+    Pg, Pg_new = Pg_new, Pg
 
 def explicit3_update_p():
-    global P
-    global P_old
-    global P_new
+    global P, P_new, P_old, Pw, Pw_new, Pw_old
     P, P_old = P_old, P
     P, P_new = P_new, P
 
 def impes_set_p(dt):
+    Pw_new[0] = P0
+    Pw_new[NX - 1] = Pw[NX - 2] - Rw[NX - 2] * G * DH
+    Pg_new[0] = Pg[1] + Rg[1] * G * DH
+    Pg_new[NX - 1] = P_ATM
+
     A = sp.lil_matrix((NX, NX), dtype=np.float64)
     b = np.zeros(NX)
     for i in range(1, NX - 1):
@@ -241,9 +252,13 @@ def impes_set_p(dt):
         Lw[i - 1] * (Pc[i] - Pc[i - 1])) / Rw[i]) / (DH * DH) + \
         (0.5 / dt) * PHI * (Sg[i] * Cg[i] - Sw[i] * Cw[i]) * (Pc[i] - Pc_old[i])
     A[0, 0] = 1.0
+    A[0, 1] = -1.0
     A[NX - 1, NX - 1] = 1.0
-    b[0] = 1.3 * P_ATM
-    b[NX - 1] = P_ATM
+    A[NX - 1, NX - 2] = -1.0
+    b[0] = 0.0
+    b[NX - 1] = 0.0
+#    b[0] = 0.5 * (P0 + Rg[1] * G * DH + 0.5 * Pc[1])
+#    b[NX - 1] = 0.5 * (P_ATM - Rw[NX - 2] * G * DH - 0.5 * Pc[NX - 2])
 
     SpA = sp.csr_matrix(A)
     P_new[:] = la.spsolve(SpA, b)
@@ -261,7 +276,7 @@ def explicit2_set_p(dt):
         ((Lg[i] * (Pw[i + 1] - Pw[i]) - Lg[i - 1] * (Pw[i] - Pw[i - 1])) / Rg[i] + \
         (Lw[i] * (Pw[i + 1] - Pw[i]) - Lw[i - 1] * (Pw[i] - Pw[i - 1])) / Rw[i]) / \
         (DH * DH))
-        
+
 def explicit3_set_p(dt):
     Pw_new[0] = P0
     Pw_new[NX - 1] = P_ATM    
@@ -327,7 +342,7 @@ def get_eps(method1, method2, time):
     P_tmp2[:] = Data_tmp[:NX]
     Sw_tmp2[:] = Data_tmp[NX:]
     datafile.close()
-    
+
     P_diff = np.linalg.norm((P_tmp1 - P_tmp2) / P_tmp1)
     Sw_diff = np.linalg.norm((Sw_tmp1 - Sw_tmp2) / Sw_tmp1)
 
@@ -385,7 +400,7 @@ def print_pc():
     for i in range(0, NX):
         x += 1.0 / NX
         PC[i] = pc(x)
-        
+
     h = np.linspace(0, 1, NX)
     fig = plt.figure()
     fig.canvas.set_window_title('pc()')
@@ -393,7 +408,7 @@ def print_pc():
     ax1.set_ylabel("pc")
     ax1.set_title("pc")
     line, = ax1.plot(h, PC, color='green', lw=2)
-    ax1.set_ylim([0.0, 0.2 * P_ATM])
+    ax1.set_ylim([0.0, P_ATM])
     plt.subplots_adjust(wspace=0.2,hspace=.4)
     #plt.show()
     saveto = PLOTS_DIR + '/' + 'pc.png'
@@ -405,8 +420,5 @@ def solve_two_phase_pinder_test():
         os.makedirs(PLOTS_DIR)
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
-        
     print_pc()
     solve_system('impes', 10000000, 1000, 1000, 1000, 1.0e-3)
-
-    

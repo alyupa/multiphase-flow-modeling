@@ -19,9 +19,10 @@ LY = LZ = 1.0
 NX = 100
 P_ATM = 1.0
 P0 = P_ATM
+P_MAX = 1.5 * P0
 SW0 = 0.35
 DH = LX / NX
-TAU = 2.5e-2
+TAU = 0.5e-4
 
 G = 9.8e-5
 PHI = 0.4
@@ -62,7 +63,7 @@ Cn = np.zeros(NX, dtype=np.float64)
 
 def init_p_s():
     for i in range(NX):
-        P[i] = P_ATM + 0.3 * P_ATM * (1.0 - i / (NX - 1))
+        P[i] = P0 + 0.1 * P0 * (1.0 - i / (NX - 1))
     P_new[:] = P
     P_old[:] = P
     Sw[:] = SW0
@@ -190,22 +191,20 @@ def explicit3_set_s(dt):
     Sw_old[:] = Sw_tmp
 
 def update_p():
-    global P
-    global P_new
+    global P, P_new, Pw, Pw_new
     P, P_new = P_new, P
-    global Pw
-    global Pw_new
     Pw, Pw_new = Pw_new, Pw
     
 def explicit3_update_p():
-    global Pw_old
-    global Pw
-    global Pw_new
-    Pw, Pw_old = Pw_old, Pw
+    global P_old, P, P_new, Pw_old, Pw, Pw_new
+    P_old, P = P, P_old
+    P, P_new = P_new, P
+    Pw_old, Pw = Pw, Pw_old
     Pw, Pw_new = Pw_new, Pw
 
 def set_pc():
-    Pc_old[:] = Pc
+    global Pc, Pc_old
+    Pc, Pc_old = Pc_old, Pc
     for i in range(NX):
         Pc[i] = pc(Sw[i])
 
@@ -230,71 +229,58 @@ def impes_set_p(dt):
         - (1.0 / dt) * P[i] * PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) - \
         (Qn[i] / Rn[i] + Qw[i] / Rw[i]) - \
         0.5 * ((Ln[i] * (Pc[i + 1] - Pc[i]) - \
-        Ln[i - 1] * (Pc[i] - Pc[i - 1])) / Rn[i] + \
+        Ln[i - 1] * (Pc[i] - Pc[i - 1])) / Rn[i] - \
         (Lw[i] * (Pc[i + 1] - Pc[i]) - \
         Lw[i - 1] * (Pc[i] - Pc[i - 1])) / Rw[i]) / (DH * DH) + \
         (0.5 / dt) * PHI * (Sn[i] * Cn[i] - Sw[i] * Cw[i]) * (Pc[i] - Pc_old[i])
     A[0, 0] = 1.0
     A[NX - 1, NX - 1] = 1.0
-    b[0] = 1.3 * P_ATM
-    b[NX - 1] = P_ATM
+    b[0] = P_MAX
+    b[NX - 1] = P0
 
     SpA = sp.csr_matrix(A)
     P_new[:] = la.spsolve(SpA, b)
 
-def impes_set_p_old(dt):
-    A = sp.lil_matrix((NX, NX), dtype=np.float64)
-    b = np.zeros(NX)
-    for i in range(1, NX - 1):
-        A[i, i - 1] = (Ln[i - 1] / Rn[i] + Lw[i - 1] / Rw[i]) / (DH * DH)
-        A[i, i] = (-1.0) * ((Ln[i] + Ln[i - 1]) / Rn[i] + \
-        (Lw[i] + Lw[i - 1]) / Rw[i]) / (DH * DH) - (1.0 / dt) * PHI * \
-        (Sn[i] * Cn[i] + Sw[i] * Cw[i])
-        A[i, i + 1] = (Ln[i] / Rn[i] + Lw[i] / Rw[i]) / (DH * DH)
-        b[i] = (G / DH) * ((Ln[i] * 0.5 * (Rn[i + 1] + Rn[i]) - \
-        Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
-        ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
-        Lw[i - 1] * 0.5 * (Rw[i - 1] + Rw[i])) / Rw[i])) \
-        - (1.0 / dt) * Pw[i] * PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) - \
-        (Qn[i] / Rn[i] + Qw[i] / Rw[i])
-    A[0, 0] = 1.0
-    A[NX - 1, NX - 1] = 1.0
-    b[0] = 1.3 * P_ATM
-    b[NX - 1] = P_ATM
-
-    SpA = sp.csr_matrix(A)
-    Pw_new[:] = la.spsolve(SpA, b)
-
 def explicit2_set_p(dt):
-    Pw_new[0] = P0 * 1.1
-    Pw_new[NX - 1] = P0
+    P_new[0] = P_MAX
+    P_new[NX - 1] = P0
     for i in range(1, NX - 1):
-        Pw_new[i] = Pw[i] + (dt / (PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]))) * \
+        P_new[i] = P[i] + (dt / (PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]))) * \
         ((-1) / DH * G * ((Ln[i] * 0.5 * (Rn[i + 1] + Rn[i]) - \
         Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
         ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
         Lw[i - 1] * 0.5 * (Rw[i - 1] + Rw[i])) / Rw[i])) + \
         (Qn[i] / Rn[i] + Qw[i] / Rw[i]) + \
-        ((Ln[i] * (Pw[i + 1] - Pw[i]) - Ln[i - 1] * (Pw[i] - Pw[i - 1])) / Rn[i] + \
-        (Lw[i] * (Pw[i + 1] - Pw[i]) - Lw[i - 1] * (Pw[i] - Pw[i - 1])) / Rw[i]) / \
+        (0.5 * ((Ln[i] * (Pc[i + 1] - Pc[i]) - \
+        Ln[i - 1] * (Pc[i] - Pc[i - 1])) / Rn[i] - \
+        (Lw[i] * (Pc[i + 1] - Pc[i]) - \
+        Lw[i - 1] * (Pc[i] - Pc[i - 1])) / Rw[i]) / (DH * DH) + \
+        (0.5 / dt) * PHI * (Sn[i] * Cn[i] - Sw[i] * Cw[i]) * (Pc[i] - Pc_old[i])) + \
+        ((Ln[i] * (P[i + 1] - P[i]) - Ln[i - 1] * (P[i] - P[i - 1])) / Rn[i] + \
+        (Lw[i] * (P[i + 1] - P[i]) - Lw[i - 1] * (P[i] - P[i - 1])) / Rw[i]) / \
         (DH * DH))
         
 def explicit3_set_p(dt):
-    Pw_new[0] = P0 * 1.1
-    Pw_new[NX - 1] = P0    
+    P_new[0] = P_MAX
+    P_new[NX - 1] = P0
     for i in range(1, NX - 1):
-        Pw_new[i] = (dt / (PHI * ((Sn[i] * Cn[i] + Sw[i] * Cw[i]) * \
+        P_new[i] = (dt / (PHI * ((Sn[i] * Cn[i] + Sw[i] * Cw[i]) * \
         (1.0 + TAU / dt) + TAU * (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i])))) * \
         ((-1) / DH * G * ((Ln[i] * 0.5 * (Rn[i + 1] + Rn[i]) - \
         Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
         ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
         Lw[i - 1] * 0.5 * (Rw[i - 1] + Rw[i])) / Rw[i])) + \
         (Qn[i] / Rn[i] + Qw[i] / Rw[i]) + \
-        ((Ln[i] * (Pw[i + 1] - Pw[i]) - Ln[i - 1] * (Pw[i] - Pw[i - 1])) / Rn[i] + \
-        (Lw[i] * (Pw[i + 1] - Pw[i]) - Lw[i - 1] * (Pw[i] - Pw[i - 1])) / Rw[i]) / \
-        (DH * DH) + (PHI / dt) * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) * (Pw[i] + \
-        (TAU / dt) * (2 * Pw[i] - Pw_old[i])) + (2 * PHI * TAU / (dt * dt)) * \
-        (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i]) * Pw[i])
+        ((Ln[i] * (P[i + 1] - P[i]) - Ln[i - 1] * (P[i] - P[i - 1])) / Rn[i] + \
+        (Lw[i] * (P[i + 1] - P[i]) - Lw[i - 1] * (P[i] - P[i - 1])) / Rw[i]) / \
+        (DH * DH) + (PHI / dt) * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) * (P[i] + \
+        (TAU / dt) * (2 * P[i] - P_old[i])) + (2 * PHI * TAU / (dt * dt)) * \
+        (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i]) * P[i] + \
+        0.5 * ((Ln[i] * (Pc[i + 1] - Pc[i]) - Ln[i - 1] * (Pc[i] - Pc[i - 1])) / Rn[i] - \
+        (Lw[i] * (Pc[i + 1] - Pc[i]) - Lw[i - 1] * (Pc[i] - Pc[i - 1])) / Rw[i]) / \
+        (DH * DH) - 0.5 * TAU * PHI * ((Sn[i] * Cn[i] - Sw[i] * Cw[i]) * \
+        (Pc[i + 1] - 2 * Pc[i] + Pc[i - 1]) - \
+        2.0 * (Cn[i] + Cw[i]) * (Sw[i] - Sw_old[i]) * (Pc[i] - Pc_old[i])) / (dt * dt))
 
 def print_plots(test_name, time):
     h = np.linspace(0, LX, NX)
@@ -313,7 +299,7 @@ def print_plots(test_name, time):
     line1, = ax2.plot(h, Pw, color='green', lw=2)
     line2, = ax2.plot(h, Pn, color='yellow', lw=2)
     line3, = ax2.plot(h, P, color='brown', lw=2)
-    ax2.set_ylim([P_ATM * 0.85, P_ATM * 1.5])
+    ax2.set_ylim([P0 * 0.85, P_MAX * 1.15])
 
     plt.subplots_adjust(wspace=0.2,hspace=.4)
     #plt.show()
@@ -366,10 +352,12 @@ def time_step(method, dt):
         update_p()
     elif (method == 'explicit2'):
         explicit2_set_p(dt)
+        set_pw_pn()
         set_s(dt)
         update_p()
     elif (method == 'explicit3'):
         explicit3_set_p(dt)
+        set_pw_pn()
         explicit3_set_s(dt)
         explicit3_update_p()
     else:
