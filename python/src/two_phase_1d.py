@@ -263,23 +263,26 @@ def explicit3_set_p(dt, tau = 0.0):
     P_new[0] = P_MAX
     P_new[NX - 1] = P0
     for i in range(1, NX - 1):
-        P_new[i] = (dt / (PHI * ((Sn[i] * Cn[i] + Sw[i] * Cw[i]) * \
-        (1.0 + tau / dt) + tau * (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i])))) * \
-        ((-1) / DH * G * ((Ln[i] * 0.5 * (Rn[i + 1] + Rn[i]) - \
+        P_new[i] = ((dt * dt) / (PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) * (dt + tau) + \
+        2.0 * tau * PHI * (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i]))) * \
+        (PHI * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) / dt * \
+        (P[i] + tau * (2 * P[i] - P_old[i]) / dt) + \
+        2.0 * tau * PHI * (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i]) * P[i] + \
+        (-1) / DH * G * ((Ln[i] * 0.5 * (Rn[i + 1] + Rn[i]) - \
         Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
         ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
         Lw[i - 1] * 0.5 * (Rw[i - 1] + Rw[i])) / Rw[i])) + \
         (Qn[i] / Rn[i] + Qw[i] / Rw[i]) + \
+        (0.5 * ((Ln[i] * (Pc[i + 1] - Pc[i]) - \
+        Ln[i - 1] * (Pc[i] - Pc[i - 1])) / Rn[i] - \
+        (Lw[i] * (Pc[i + 1] - Pc[i]) - \
+        Lw[i - 1] * (Pc[i] - Pc[i - 1])) / Rw[i]) / (DH * DH) + \
+        (0.5 / dt) * PHI * (Sn[i] * Cn[i] - Sw[i] * Cw[i]) * (Pc[i] - Pc_old[i])) + \
         ((Ln[i] * (P[i + 1] - P[i]) - Ln[i - 1] * (P[i] - P[i - 1])) / Rn[i] + \
         (Lw[i] * (P[i + 1] - P[i]) - Lw[i - 1] * (P[i] - P[i - 1])) / Rw[i]) / \
-        (DH * DH) + (PHI / dt) * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) * (P[i] + \
-        (tau / dt) * (2 * P[i] - P_old[i])) + (2 * PHI * tau / (dt * dt)) * \
-        (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i]) * P[i] + \
-        0.5 * ((Ln[i] * (Pc[i + 1] - Pc[i]) - Ln[i - 1] * (Pc[i] - Pc[i - 1])) / Rn[i] - \
-        (Lw[i] * (Pc[i + 1] - Pc[i]) - Lw[i - 1] * (Pc[i] - Pc[i - 1])) / Rw[i]) / \
-        (DH * DH) - 0.5 * tau * PHI * ((Sn[i] * Cn[i] - Sw[i] * Cw[i]) * \
-        (Pc[i + 1] - 2 * Pc[i] + Pc[i - 1]) - \
-        2.0 * (Cn[i] + Cw[i]) * (Sw[i] - Sw_old[i]) * (Pc[i] - Pc_old[i])) / (dt * dt))
+        (DH * DH) - \
+        tau * PHI * (Cn[i] + Cw[i]) * (Sw[i] - Sw_old[i]) * (Pc[i] - Pc_old[i]) / (dt * dt))
+#        0.5 * tau * PHI * (Sn[i] * Cn[i] - Sw[i] * Cw[i]) * d2Pc/dt2 \
 
 def print_plots(test_name, time):
     h = np.linspace(0, LX, NX)
@@ -439,7 +442,8 @@ def print_pc():
     ax1.set_ylabel("pc")
     ax1.set_title("pc")
     line, = ax1.plot(h, PC, color='green', lw=2)
-    ax1.set_ylim([0.0, 1.0])
+    plim = pc(0.1) * 1.1
+    ax1.set_ylim([0.0, plim])
     plt.subplots_adjust(wspace=0.2,hspace=.4)
     #plt.show()
     saveto = PLOTS_DIR + '/' + 'pc.png'
