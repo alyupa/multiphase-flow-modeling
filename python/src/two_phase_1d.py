@@ -22,7 +22,6 @@ P0 = P_ATM
 P_MAX = 1.5 * P0
 SW0 = 0.35
 DH = LX / NX
-TAU = 0.5e-4
 
 G = 9.8e-5
 PHI = 0.4
@@ -172,19 +171,19 @@ def set_s(dt):
         Sw[i] * Cw[i] * (Pw_new[i] - Pw[i])
     Sn[:] = 1.0 - Sw
 
-def explicit3_set_s(dt):
+def explicit3_set_s(dt, tau = 0.0):
     Sw_tmp[:] = Sw
     Sw[0] = 0.7
     Sw[NX - 1] = SW0
     for i in range(1, NX - 1):
-        Sw[i] = (dt / (PHI * Rw[i] * (1.0 + TAU / dt + \
-        TAU * Cw[i] * (Pw_new[i] - Pw[i]) / dt))) * \
+        Sw[i] = (dt / (PHI * Rw[i] * (1.0 + tau / dt + \
+        tau * Cw[i] * (Pw_new[i] - Pw[i]) / dt))) * \
         (((Lw[i] * (Pw_new[i + 1] - Pw_new[i]) - \
         Lw[i - 1] * (Pw_new[i] - Pw_new[i - 1])) / (DH * DH) - \
         (G / DH) * (0.5 * (Rw[i + 1] + Rw[i]) * Lw[i] - \
         0.5 * (Rw[i] + Rw[i - 1]) * Lw[i - 1]) + Qw[i]) - \
         PHI * Rw[i] * Sw[i] * Cw[i] * (Pw_new[i] - Pw[i]) / dt + \
-        PHI * Rw[i] * Sw[i] / dt + TAU * PHI * Rw[i] * (2 * Sw[i] - \
+        PHI * Rw[i] * Sw[i] / dt + tau * PHI * Rw[i] * (2 * Sw[i] - \
         Sw_old[i] - Sw[i] * Cw[i] * (Pw_new[i] - 2 * Pw[i] + Pw_old[i]) + \
         Cw[i] * (Pw_new[i] - Pw[i]) * Sw_old[i]) / (dt * dt))
     Sn[:] = 1.0 - Sw
@@ -260,12 +259,12 @@ def explicit2_set_p(dt):
         (Lw[i] * (P[i + 1] - P[i]) - Lw[i - 1] * (P[i] - P[i - 1])) / Rw[i]) / \
         (DH * DH))
         
-def explicit3_set_p(dt):
+def explicit3_set_p(dt, tau = 0.0):
     P_new[0] = P_MAX
     P_new[NX - 1] = P0
     for i in range(1, NX - 1):
         P_new[i] = (dt / (PHI * ((Sn[i] * Cn[i] + Sw[i] * Cw[i]) * \
-        (1.0 + TAU / dt) + TAU * (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i])))) * \
+        (1.0 + tau / dt) + tau * (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i])))) * \
         ((-1) / DH * G * ((Ln[i] * 0.5 * (Rn[i + 1] + Rn[i]) - \
         Ln[i - 1] * 0.5 * (Rn[i - 1] + Rn[i])) / Rn[i] + \
         ((Lw[i] * 0.5 * (Rw[i + 1] + Rw[i]) - \
@@ -274,11 +273,11 @@ def explicit3_set_p(dt):
         ((Ln[i] * (P[i + 1] - P[i]) - Ln[i - 1] * (P[i] - P[i - 1])) / Rn[i] + \
         (Lw[i] * (P[i + 1] - P[i]) - Lw[i - 1] * (P[i] - P[i - 1])) / Rw[i]) / \
         (DH * DH) + (PHI / dt) * (Sn[i] * Cn[i] + Sw[i] * Cw[i]) * (P[i] + \
-        (TAU / dt) * (2 * P[i] - P_old[i])) + (2 * PHI * TAU / (dt * dt)) * \
+        (tau / dt) * (2 * P[i] - P_old[i])) + (2 * PHI * tau / (dt * dt)) * \
         (Cw[i] - Cn[i]) * (Sw[i] - Sw_old[i]) * P[i] + \
         0.5 * ((Ln[i] * (Pc[i + 1] - Pc[i]) - Ln[i - 1] * (Pc[i] - Pc[i - 1])) / Rn[i] - \
         (Lw[i] * (Pc[i + 1] - Pc[i]) - Lw[i - 1] * (Pc[i] - Pc[i - 1])) / Rw[i]) / \
-        (DH * DH) - 0.5 * TAU * PHI * ((Sn[i] * Cn[i] - Sw[i] * Cw[i]) * \
+        (DH * DH) - 0.5 * tau * PHI * ((Sn[i] * Cn[i] - Sw[i] * Cw[i]) * \
         (Pc[i + 1] - 2 * Pc[i] + Pc[i - 1]) - \
         2.0 * (Cn[i] + Cw[i]) * (Sw[i] - Sw_old[i]) * (Pc[i] - Pc_old[i])) / (dt * dt))
 
@@ -340,7 +339,7 @@ def get_eps(method1, method2, time):
     print 'Pressure error: ' + str(Pw_eps * 100) + '%'
     print 'Saturation error: ' + str(Sw_eps * 100) + '%'
     
-def time_step(method, dt):
+def time_step(method, dt, tau = 0.0):
     set_pc()
     set_rho()
     set_c()
@@ -356,15 +355,15 @@ def time_step(method, dt):
         set_s(dt)
         update_p()
     elif (method == 'explicit3'):
-        explicit3_set_p(dt)
+        explicit3_set_p(dt, tau)
         set_pw_pn()
-        explicit3_set_s(dt)
+        explicit3_set_s(dt, tau)
         explicit3_update_p()
     else:
         print('error: wrong method')
         return
 
-def solve_system(method, timesteps, print_t, save_plots_t, save_data_t, dt):
+def solve_system(method, timesteps, print_t, save_plots_t, save_data_t, dt, tau = 0.0):
     init_p_s()
     # the first step
     if (method == 'impes' or method == 'explicit2'):
@@ -376,7 +375,7 @@ def solve_system(method, timesteps, print_t, save_plots_t, save_data_t, dt):
         return
     # other steps
     for t in range(2, timesteps + 1):
-        time_step(method, dt)
+        time_step(method, dt, tau)
         if (t % print_t == 0):
             print('time = ' + str(t * dt) + 's')
         if (t % save_plots_t == 0):
@@ -456,11 +455,9 @@ def solve_two_phase_problem():
 #    print_perm()
     print_pc()
     #print_tec('impes', 10.0)
-    solve_system('impes', 10000000, 1000, 1000, 1000, 1.0e-3)
-    #solve_system('explicit2', 10000, 1000, 100000, 10000, 1.0e-5)
-    #solve_system('explicit3', 100000, 1000, 100000, 10000, 1.0e-3)
+    #solve_system('impes', 100000, 1000, 1000, 1000, 1.0e-3)
+    #solve_system('explicit2', 10000000, 10000, 100000, 100000, 1.0e-5)
+    solve_system('explicit3', 1000000, 10000, 1000, 10000, 1.0e-4, 0.5e-4)
     #get_eps('impes', 'explicit2', 0.1)
     #get_eps('explicit3', 'explicit2', 0.1)
     #get_eps('explicit3', 'impes', 100.0)
-
-    
