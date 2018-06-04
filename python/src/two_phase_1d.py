@@ -450,6 +450,21 @@ def print_pc():
     fig.savefig(saveto, format='png')
     plt.close(fig)
 
+def print_tec_p(filename):
+    Pw_tmp1 = np.zeros(NX)
+    Sw_tmp1 = np.zeros(NX)
+
+    datafile = open(filename)
+    Data_tmp = np.loadtxt(datafile, dtype=np.float64)
+    Pw_tmp1[:] = Data_tmp[:NX]
+    Sw_tmp1[:] = Data_tmp[NX:]
+    datafile.close()
+
+    x = 0
+    for i in range(0, NX):
+        print "{0:.2f}".format(x) + ' ' + "{0:.18E}".format(Pw_tmp1[i] + 0.5 * pc(Sw_tmp1[i]))
+        x += LX / NX
+
 def solve_two_phase_problem():
     if not os.path.exists(PLOTS_DIR):
         os.makedirs(PLOTS_DIR)
