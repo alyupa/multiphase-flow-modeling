@@ -1158,7 +1158,7 @@ void data_initialization(long int* t)
 
 #ifdef ENERGY
 				// !!!! Нужно задать начальные распределения температуры, энтальпии, энергии!
-				HostArraysPtr.T[local] = 285;
+				HostArraysPtr.T[local] = 300;
 
 				test_positive(HostArraysPtr.T[local], __FILE__, __LINE__);
 #endif
