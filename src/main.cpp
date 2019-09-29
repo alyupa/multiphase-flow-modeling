@@ -1106,9 +1106,12 @@ static void S_local_initialization(int local)
 {
 	HostArraysPtr.S_w[local] = def.S_w_init;
 	HostArraysPtr.S_n[local] = def.S_n_init;
-	HostArraysPtr.S_g[local] = 1. - def.S_w_init - def.S_n_init;
-//	HostArraysPtr.S_w[local] = def.S_w_init + 0.1 * cos(0.1 * local) + 0.1 / (local + 1.) + 0.1 * exp(-0.01 * local);
-//	HostArraysPtr.S_n[local] = def.S_n_init + 0.1 * sin((double)local) - 0.1 / (local + 1.) - 0.1 * exp(-0.005 * local);;
+	//HostArraysPtr.S_w[local] = def.S_w_init + (rand() % 7 - 3) * 0.01;
+	//HostArraysPtr.S_n[local] = def.S_n_init + (rand() % 7 - 3) * 0.01;
+	//HostArraysPtr.S_g[local] = 1. - def.S_w_init - def.S_n_init;
+	//HostArraysPtr.S_w[local] = def.S_w_init + 0.1 * cos(0.1 * local) + 0.1 / (local + 1.) + 0.1 * exp(-0.01 * local);
+	//HostArraysPtr.S_n[local] = def.S_n_init + 0.1 * sin((double)local) - 0.1 / (local + 1.) - 0.1 * exp(-0.005 * local);
+	HostArraysPtr.S_g[local] = 1. - HostArraysPtr.S_w[local] - HostArraysPtr.S_n[local];
 }
 
 void data_initialization(long int* t)

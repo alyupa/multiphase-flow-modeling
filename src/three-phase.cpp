@@ -366,15 +366,15 @@ void Border_P(int i, int j, int k)
 		if ((j != 0) && (j != (def.locNy) - 1))
 		{
 			HostArraysPtr.P_w[local] = HostArraysPtr.P_w[local1];
-			HostArraysPtr.P_n[local] = HostArraysPtr.P_w[local1] + Pk_nw;
-			HostArraysPtr.P_g[local] = HostArraysPtr.P_w[local1] + Pk_nw + Pk_gn;
+			HostArraysPtr.P_n[local] = HostArraysPtr.P_n[local1];
+			HostArraysPtr.P_g[local] = HostArraysPtr.P_g[local1];
 		
 		}
 		else if (j == 0)
 		{
-			HostArraysPtr.P_w[local] = def.P_atm;
+			/*HostArraysPtr.P_w[local] = def.P_atm;
 			HostArraysPtr.P_n[local] = def.P_atm;
-			HostArraysPtr.P_g[local] = def.P_atm;
+			HostArraysPtr.P_g[local] = def.P_atm;*/
 
 			/*if((i > (def.locNx) / 3) && (i < 2 * (def.locNx) / 3) && (((def.locNz) < 2) || (k > (def.locNz) / 3) && (k < 2 * (def.locNz) / 3)))
 			{*/
@@ -390,18 +390,18 @@ void Border_P(int i, int j, int k)
 				HostArraysPtr.P_w[local] = (HostArraysPtr.P_w[local1]
 				- (def.ro0_w) * (def.g_const) * (def.hy) * (1. - (def.beta_w) * (def.P_atm))) 
 					/ (1. + (def.beta_w) * (def.ro0_w) * (def.g_const) * (def.hy));
-				HostArraysPtr.P_n[local] = (HostArraysPtr.P_w[local1]
-				+ Pk_nw - (def.ro0_n) * (def.g_const) * (def.hy) * (1. - (def.beta_n) * (def.P_atm))) 
+				HostArraysPtr.P_n[local] = (HostArraysPtr.P_n[local1]
+				- (def.ro0_n) * (def.g_const) * (def.hy) * (1. - (def.beta_n) * (def.P_atm))) 
 					/ (1. + (def.beta_n) * (def.ro0_n) * (def.g_const) * (def.hy));
-				HostArraysPtr.P_g[local] = (HostArraysPtr.P_w[local1]
-				+ Pk_nw + Pk_gn) / (1. + (def.ro0_g) * (def.g_const) * (def.hy) / (def.P_atm));
+				HostArraysPtr.P_g[local] = (HostArraysPtr.P_g[local1]) 
+				/ (1. + (def.ro0_g) * (def.g_const) * (def.hy) / (def.P_atm));
 			/*}*/
 		}
 		else
 		{
-			HostArraysPtr.P_w[local] = 1.1 * def.P_atm;
+			/*HostArraysPtr.P_w[local] = 1.1 * def.P_atm;
 			HostArraysPtr.P_n[local] = 1.1 * def.P_atm;
-			HostArraysPtr.P_g[local] = 1.1 * def.P_atm;
+			HostArraysPtr.P_g[local] = 1.1 * def.P_atm;*/
 
 			// Условия непротекания (normal u = 0)
 /*#ifdef ENERGY
@@ -420,11 +420,11 @@ void Border_P(int i, int j, int k)
 			HostArraysPtr.P_w[local] = (HostArraysPtr.P_w[local1]
 			+ (def.ro0_w) * (def.g_const) * (def.hy) * (1. - (def.beta_w) * (def.P_atm)))
 				/ (1. + (def.beta_w) * (def.ro0_w) * (def.g_const) * (def.hy));
-			HostArraysPtr.P_n[local] = (HostArraysPtr.P_w[local1]
-			+ Pk_nw + (def.ro0_n) * (def.g_const) * (def.hy) * (1. - (def.beta_n) * (def.P_atm)))
+			HostArraysPtr.P_n[local] = (HostArraysPtr.P_n[local1]
+			+ (def.ro0_n) * (def.g_const) * (def.hy) * (1. - (def.beta_n) * (def.P_atm)))
 				/ (1. + (def.beta_n) * (def.ro0_n) * (def.g_const) * (def.hy));
-			HostArraysPtr.P_g[local] = (HostArraysPtr.P_w[local1]
-			+ Pk_nw + Pk_gn) / (1. - (def.ro0_g) * (def.g_const) * (def.hy) / (def.P_atm));
+			HostArraysPtr.P_g[local] = (HostArraysPtr.P_g[local1]) 
+			/ (1. - (def.ro0_g) * (def.g_const) * (def.hy) / (def.P_atm));
 //#endif
 		}
 		test_positive(HostArraysPtr.P_w[local], __FILE__, __LINE__);
@@ -444,11 +444,11 @@ void Border_T(int i, int j, int k)
 
 		if (i == 0)
 		{
-			HostArraysPtr.T[local] = 960;
+			HostArraysPtr.T[local] = 310;
 		}
 		else if(i == (def.locNx) - 1)
 		{
-			HostArraysPtr.T[local] = 240;
+			HostArraysPtr.T[local] = 290;
 		}
 		else
 		{
